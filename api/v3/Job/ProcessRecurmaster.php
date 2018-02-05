@@ -23,7 +23,14 @@ function _civicrm_api3_job_process_recurmaster_spec(&$spec) {
  * @throws API_Exception
  */
 function civicrm_api3_job_process_recurmaster($params) {
-  $returnValues = CRM_Recurmaster_Master::update();
+  if (!isset($params['recur_ids'])) {
+    $params['recur_ids'] = array();
+  }
+  if (!is_array($params['recur_ids'])) {
+    $params['recur_ids'] = array($params['recur_ids']);
+  }
+
+  $returnValues = CRM_Recurmaster_Master::update($params['recur_ids']);
 
   // Spec: civicrm_api3_create_success($values = 1, $params = array(), $entity = NULL, $action = NULL)
   return civicrm_api3_create_success($returnValues, $params, 'Job', 'ProcessRecurmaster');
