@@ -30,18 +30,6 @@ class CRM_Recurmaster_Utils {
   }
 
   /**
-   * Return the field ID for is_master custom field
-   *
-   * @param bool $fullString If TRUE, return custom_XX instead of XX
-   *
-   * @return null|string
-   * @throws \CiviCRM_API3_Exception
-   */
-  public static function getIsMasterCustomField($fullString = FALSE) {
-    return self::getField('is_master', $fullString);
-  }
-
-  /**
    * Return the field ID for master_recur_id custom field
    *
    * @param bool $fullString If TRUE, return custom_XX instead of XX

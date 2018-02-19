@@ -101,6 +101,7 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
     }
 
     civicrm_api3('ContributionRecur', 'create', $contributionRecurParams);
+    civicrm_api3('Job', 'process_recurmaster', array('recur_ids' => array($values['id'])));
 
     if (empty((CRM_Utils_Request::retrieve('snippet', 'String')))) {
       // if $_REQUEST['snippet'] is set we are probably in popup context so don't redirect

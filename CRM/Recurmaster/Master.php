@@ -9,18 +9,17 @@
 class CRM_Recurmaster_Master {
 
   public static function update($recurIds = array()) {
-
-    $contributionRecurParams = array(
-      CRM_Recurmaster_Utils::getIsMasterCustomField(TRUE) => 1,
-      'options' => array('limit' => 0),
-    );
-
     if (!empty($recurIds) && is_array($recurIds)) {
       // Generate list of recur Ids
-      $contributionRecurParams['id'] = array('IN' => $recurIds);
+      $contributionRecurParams = array(
+        'id' => array('IN' => $recurIds),
+        'options' => array('limit' => 0),
+      );
+      $contributionRecurs = civicrm_api3('ContributionRecur', 'get', $contributionRecurParams);
     }
-
-    $contributionRecurs = civicrm_api3('ContributionRecur', 'get', $contributionRecurParams);
+    else {
+      $contributionRecurs = self::getMasterRecurringContributions();
+    }
 
     if (empty($contributionRecurs['values'])) {
       Civi::log()->info('CRM_Recurmaster_Master: No master recurring contributions for processing');
@@ -41,7 +40,6 @@ class CRM_Recurmaster_Master {
       $recurResult = civicrm_api3('ContributionRecur', 'create', $contributionRecur);
       $recurs = CRM_Utils_Array::value('values', $recurResult);
     }
-
     return $recurs;
   }
 
@@ -72,6 +70,53 @@ class CRM_Recurmaster_Master {
     return TRUE;
   }
 
+  public static function isMasterRecur($recurId) {
+    // Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
+    $paymentProcessorTypes = explode(',', CRM_Recurmaster_Settings::getValue('paymentprocessortypes'));
+    $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', array(
+      'return' => array("id"),
+      'payment_processor_type_id' => array('IN' => $paymentProcessorTypes),
+    ));
+
+    $paymentProcessorIds = array_keys($paymentProcessors['values']);
+
+    $recurParams = array(
+      'payment_processor_id' => array('IN' => $paymentProcessorIds),
+      'id' => $recurId,
+    );
+    try {
+      $contributionRecurRecord = civicrm_api3('ContributionRecur', 'getsingle', $recurParams);
+    }
+    catch (Exception $e) {
+      return FALSE;
+    }
+    return TRUE;
+  }
+
+  public static function getMasterRecurringContributions($contactId = NULL) {
+    // Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
+    $paymentProcessorTypes = explode(',', CRM_Recurmaster_Settings::getValue('paymentprocessortypes'));
+    $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', array(
+      'return' => array("id"),
+      'payment_processor_type_id' => array('IN' => $paymentProcessorTypes),
+    ));
+
+    $paymentProcessorIds = array_keys($paymentProcessors['values']);
+
+    $recurParams = array(
+      'payment_processor_id' => array('IN' => $paymentProcessorIds),
+      'options' => array('limit' => 0),
+    );
+    if (!empty($contactId)) {
+      $recurParams['contact_id'] = $contactId;
+    }
+    $contributionRecurRecords = civicrm_api3('ContributionRecur', 'get', $recurParams);
+    if (empty($contributionRecurRecords['values'])) {
+      return array();
+    }
+    return $contributionRecurRecords['values'];
+  }
+
   /**
    * Get list of recurring contribution records for contact
    * @param $contactID
@@ -84,26 +129,16 @@ class CRM_Recurmaster_Master {
         'id' => $recurId,
         'contact_id' => $contactId,
       ));
+      if (!empty($contributionRecurRecords['values'])) {
+        $contributionRecurRecords = $contributionRecurRecords['values'];
+      }
     }
     else {
-      // Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
-      $paymentProcessorTypes = explode(',', CRM_Recurmaster_Settings::getValue('paymentprocessortypes'));
-      $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', array(
-        'return' => array("id"),
-        'payment_processor_type_id' => array('IN' => $paymentProcessorTypes),
-      ));
-
-      $paymentProcessorIds = array_keys($paymentProcessors['values']);
-
-      $contributionRecurRecords = civicrm_api3('ContributionRecur', 'get', array(
-        'payment_processor_id' => array('IN' => $paymentProcessorIds),
-        'contact_id' => $contactId,
-        'options' => array('limit' => 0),
-      ));
+      $contributionRecurRecords = self::getMasterRecurringContributions($contactId);
     }
 
     $cRecur = array();
-    foreach ($contributionRecurRecords['values'] as $contributionRecur) {
+    foreach ($contributionRecurRecords as $contributionRecur) {
       // Get payment processor name used for recurring contribution
       try {
         if (empty($contributionRecur['payment_processor_id'])) {

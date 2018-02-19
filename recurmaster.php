@@ -151,17 +151,17 @@ function recurmaster_civicrm_links($op, $objectName, $objectId, &$links, &$mask,
           $crid = $values['crid'];
           $cid = $values['cid'];
 
+          if (CRM_Recurmaster_Master::isMasterRecur($crid)) {
+            // We are a "Master" recurring contribution, so don't allow linking to others!
+            return;
+          }
+
           try {
             $contributionRecur = civicrm_api3('ContributionRecur', 'getsingle', array(
               'id' => $crid,
             ));
           }
           catch (CiviCRM_API3_Exception $e) {
-            return;
-          }
-
-          if (!empty($contributionRecur[CRM_Recurmaster_Utils::getIsMasterCustomField(TRUE)])) {
-            // We are a "Master" recurring contribution, so don't allow linking to others!
             return;
           }
 

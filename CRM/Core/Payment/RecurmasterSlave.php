@@ -76,6 +76,7 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
       $recurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)] = $params['master_recur'];
       // Update the recurring payment
       civicrm_api3('ContributionRecur', 'create', $recurParams);
+      civicrm_api3('Job', 'process_recurmaster', array('recur_ids' => array($params['master_recur'])));
     }
 
     // We need to set this to ensure that contributions are set to the correct status

@@ -27,7 +27,7 @@ Popup to configure linked recurring contribution:
 
 ## TODO:
 1. Calculate amount based on frequencies (ie. monthly will be taken every month, annual will only be taken once a year).
-1. Currently you have to set `is_master` via the API.  This needs to be done in a better way.
-1. Only allow linking to certain types of recurring contribution (based on payment processor type?).
-1. Don't allow recurring contributions with payment processors to be linked to masters?
 1. Calculate immediately - automatic or as option?
+1. Trigger change on master upstream (eg. if amount changes update via Smartdebit API)
+1. UI - view recurring contribution should show custom fields - CORE
+1. UI - Add a new "Recurring contribution" tab - Extension
