@@ -19,6 +19,11 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
    */
   private $_crid;
 
+  /**
+   * @var int Master Recurring contribution ID
+   */
+  private $masterRecurId;
+
   public function preProcess() {
     $this->_cid = CRM_Utils_Request::retrieve('cid', 'Positive');
     $this->_crid = CRM_Utils_Request::retrieve('crid', 'Positive');
@@ -48,8 +53,8 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
           'contact_id' => $this->_cid,
           'return' => array(CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)),
         ));
-        $masterRecurId = $contributionRecurRecords[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)];
-        $currentRecur = CRM_Recurmaster_Master::getContactMasterRecurringContributionList($this->_cid, $masterRecurId);
+        $this->masterRecurId = $contributionRecurRecords[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)];
+        $currentRecur = CRM_Recurmaster_Master::getContactMasterRecurringContributionList($this->_cid, $this->masterRecurId);
         $this->assign('currentRecur', $currentRecur);
         break;
     }
@@ -89,7 +94,8 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
     );
     switch ($this->_action) {
       case CRM_Core_Action::ADD:
-        $contributionRecurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)] = $values['contribution_recur_id'];
+        $this->masterRecurId = CRM_Utils_Array::value('contribution_recur_id', $values);
+        $contributionRecurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)] = $this->masterRecurId;
         break;
 
       case CRM_Core_Action::DELETE:
@@ -101,7 +107,9 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
     }
 
     civicrm_api3('ContributionRecur', 'create', $contributionRecurParams);
-    civicrm_api3('Job', 'process_recurmaster', array('recur_ids' => array($values['id'])));
+    if (!empty($this->masterRecurId)) {
+      civicrm_api3('Job', 'process_recurmaster', array('recur_ids' => array($this->masterRecurId)));
+    }
 
     if (empty((CRM_Utils_Request::retrieve('snippet', 'String')))) {
       // if $_REQUEST['snippet'] is set we are probably in popup context so don't redirect
