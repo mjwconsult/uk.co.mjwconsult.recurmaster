@@ -26,18 +26,31 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
   }
 
   public function buildQuickForm() {
+    $elementNames = array();
 
     switch ($this->_action) {
       case CRM_Core_Action::ADD:
         CRM_Utils_System::setTitle('Link to master Recurring Contribution');
-        $availableRecur = $this->getContactMasterRecurringContributions();
+        $availableRecur = CRM_Recurmaster_Master::getContactMasterRecurringContributionList($this->_cid);
         if (!empty($availableRecur)) {
-          $this->add('select', 'contribution_recur_id', ts('Recurring Contribution'), $this->getContactMasterRecurringContributions());
+          $this->add('select', 'contribution_recur_id', ts('Recurring Contribution'), CRM_Recurmaster_Master::getContactMasterRecurringContributionList($this->_cid));
+          $elementNames[] = 'contribution_recur_id';
+        }
+        else {
+          CRM_Core_Error::statusBounce('This contact does not have any master recurring contributions.');
         }
         break;
 
       case CRM_Core_Action::DELETE:
         CRM_Utils_System::setTitle('Unlink from master Recurring Contribution');
+        $contributionRecurRecords = civicrm_api3('ContributionRecur', 'getsingle', array(
+          'id' => $this->_crid,
+          'contact_id' => $this->_cid,
+          'return' => array(CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)),
+        ));
+        $masterRecurId = $contributionRecurRecords[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)];
+        $currentRecur = CRM_Recurmaster_Master::getContactMasterRecurringContributionList($this->_cid, $masterRecurId);
+        $this->assign('currentRecur', $currentRecur);
         break;
     }
 
@@ -57,7 +70,7 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
     ));
 
     // export form elements
-    $this->assign('elementNames', $this->getRenderableElementNames());
+    $this->assign('elementNames', $elementNames);
 
     parent::buildQuickForm();
   }
@@ -105,11 +118,8 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
     if (empty($this->_cid)) {
       return array();
     }
-    // Get recurring contributions by contact Id where is_master=1
-    $contributionRecurRecords = civicrm_api3('ContributionRecur', 'get', array(
-      CRM_Recurmaster_Utils::getIsMasterCustomField(TRUE) => 1,
-      'options' => array('limit' => 0),
-    ));
+
+    $contributionRecurRecords = CRM_Recurmaster_Master::getContactMasterRecurringContributions($this->_cid);
 
     $cRecur = array();
     foreach ($contributionRecurRecords['values'] as $contributionRecur) {
@@ -138,27 +148,6 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
         . '/' . CRM_Utils_Array::value('trxn_id', $contributionRecur);
     }
     return $cRecur;
-  }
-
-  /**
-   * Get the fields/elements defined in this form.
-   *
-   * @return array (string)
-   */
-  public function getRenderableElementNames() {
-    // The _elements list includes some items which should not be
-    // auto-rendered in the loop -- such as "qfKey" and "buttons".  These
-    // items don't have labels.  We'll identify renderable by filtering on
-    // the 'label'.
-    $elementNames = array();
-    foreach ($this->_elements as $element) {
-      /** @var HTML_QuickForm_Element $element */
-      $label = $element->getLabel();
-      if (!empty($label)) {
-        $elementNames[] = $element->getName();
-      }
-    }
-    return $elementNames;
   }
 
 }

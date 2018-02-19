@@ -123,6 +123,25 @@ function recurmaster_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
   _recurmaster_civix_civicrm_alterSettingsFolders($metaDataFolders);
 }
 
+/**
+ * Implements hook_civicrm_navigationMenu().
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_navigationMenu
+ *
+ */
+function recurmaster_civicrm_navigationMenu(&$menu) {
+  $item[] =  array (
+    'label' => ts('Master Recurring Contributions'), array('domain' => E::LONG_NAME),
+    'name'       => E::SHORT_NAME,
+    'url'        => 'civicrm/admin/recurmaster',
+    'permission' => 'administer CiviCRM',
+    'operator'   => NULL,
+    'separator'  => NULL,
+  );
+  _recurmaster_civix_insert_navigation_menu($menu, 'Administer/CiviContribute', $item[0]);
+  _recurmaster_civix_navigationMenu($menu);
+}
+
 function recurmaster_civicrm_links($op, $objectName, $objectId, &$links, &$mask, &$values) {
   //create a Send Invoice link with the context of the participant's order ID (a custom participant field)
   switch ($objectName) {

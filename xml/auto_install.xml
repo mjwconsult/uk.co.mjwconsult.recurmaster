@@ -21,22 +21,6 @@
   </CustomGroups>
   <CustomFields>
     <CustomField>
-      <name>is_master</name>
-      <label>Is Master?</label>
-      <data_type>Boolean</data_type>
-      <html_type>Radio</html_type>
-      <default_value>0</default_value>
-      <is_required>0</is_required>
-      <is_searchable>1</is_searchable>
-      <is_search_range>0</is_search_range>
-      <weight>1</weight>
-      <is_active>1</is_active>
-      <is_view>1</is_view>
-      <column_name>is_master_17</column_name>
-      <in_selector>0</in_selector>
-      <custom_group_name>recur_master</custom_group_name>
-    </CustomField>
-    <CustomField>
       <name>master_recur_id</name>
       <label>master_recur_id</label>
       <data_type>Int</data_type>
