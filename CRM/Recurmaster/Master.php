@@ -8,6 +8,15 @@
 
 class CRM_Recurmaster_Master {
 
+  /**
+   * Update the master recurring contributions and update scheduled dates for all linked recurring contributions
+   *
+   * @param array $recurIds
+   *
+   * @return array|mixed
+   * @throws \CiviCRM_API3_Exception
+   * @throws \Exception
+   */
   public static function update($recurIds = array()) {
     if (!empty($recurIds) && is_array($recurIds)) {
       // Generate list of recur Ids
@@ -18,7 +27,7 @@ class CRM_Recurmaster_Master {
       $contributionRecurs = civicrm_api3('ContributionRecur', 'get', $contributionRecurParams);
     }
     else {
-      $contributionRecurs = self::getMasterRecurringContributions();
+      $contributionRecurs = self::getMasterRecurringContributionsbyContact();
     }
 
     if (empty($contributionRecurs['values'])) {
@@ -30,7 +39,8 @@ class CRM_Recurmaster_Master {
     foreach ($contributionRecurs['values'] as $id => $contributionRecur) {
       $linkedRecurs = self::getLinkedRecurring($id);
       $amount = 0;
-      foreach ($linkedRecurs as $lId => $lDetail) {
+      foreach ($linkedRecurs as $lId => &$lDetail) {
+        $lDetail = self::setNextPaymentDate($lDetail, $contributionRecur);
         if (self::takeLinkedPayment($lDetail, $contributionRecur)) {
           $amount += $lDetail['amount'];
         }
@@ -43,7 +53,15 @@ class CRM_Recurmaster_Master {
     return $recurs;
   }
 
-  public static function getLinkedRecurring($masterId) {
+  /**
+   * Return an array of linked recurring contribution details
+   *
+   * @param $masterId
+   *
+   * @return array|null
+   * @throws \CiviCRM_API3_Exception
+   */
+  private static function getLinkedRecurring($masterId) {
     $contributionRecurParams = array(
       CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE) => $masterId,
       'options' => array('limit' => 0),
@@ -59,20 +77,187 @@ class CRM_Recurmaster_Master {
     }
   }
 
-  public static function takeLinkedPayment($lDetail, $mDetail) {
+  /**
+   * Determine whether the linked payment should be taken or not.
+   * Check that the currency is the same and the next scheduled date matches
+   *
+   * @param array $lDetail Linked recurring contribution details
+   * @param array $mDetail Master recurring contribution details
+   *
+   * @return bool
+   */
+  private static function takeLinkedPayment($lDetail, $mDetail) {
     // Does currency match?
     if ($lDetail['currency'] !== $mDetail['currency']) {
       Civi::log()->debug('CRM_Recurmaster_Master: Currency does not match (' . $lDetail['id'] . '/' . $mDetail['id']);
       return FALSE;
     }
-    // Does frequency match?
-    // TODO: Support non-matching frequencies
-    return TRUE;
+
+    // We don't care about the time, only the date:
+    $linkedDate = new DateTime($lDetail['next_sched_contribution_date']);
+    $masterDate = new DateTime($mDetail['next_sched_contribution_date']);
+    $linkedDate->setTime(0,0,0,0);
+    $masterDate->setTime(0,0,0,0);
+    // Do the next scheduled contribution dates match for linked and master?
+    if ($linkedDate === $masterDate) {
+      return TRUE;
+    }
+
+    return FALSE;
   }
 
+  /**
+   * Updates the next_sched_contribution date for the linked recurring contribution
+   *  based on frequency.  Note the master must have next_sched_contribution_date set.
+   *
+   * @param $lDetail
+   * @param $mDetail
+   *
+   * @return bool|array FALSE or updated $lDetail array with next_sched_date
+   * @throws \CiviCRM_API3_Exception
+   * @throws \Exception
+   */
+  private static function setNextPaymentDate($lDetail, $mDetail) {
+    if (!empty($lDetail['next_sched_contribution_date'])) {
+      return FALSE;
+    }
+
+    if (empty($mDetail['next_sched_contribution_date'])) {
+      Civi::log()->error('recurmaster: Cannot use as master if next_sched_contribution_date is not set R' . $mDetail['id']);
+      return FALSE;
+    }
+
+    // No scheduled contribution date, so we calculate one as follows:
+    // 1. Get next date for master (subtract lead time).
+    // 2. If frequency matches, set next date = master next date
+    // 3. If frequency doesn't match, calculate next date
+
+    // 1. Get next available date for master
+    $nextMasterScheduledDateString = $mDetail['next_sched_contribution_date'];
+    // TODO: Modify this date to include a lead time
+    $nextMasterScheduledDate = new DateTime($nextMasterScheduledDateString);
+
+    // Does frequency match?
+    if (($lDetail['frequency_unit'] === $mDetail['frequency_unit'])
+        && ($lDetail['frequency_interval'] === $mDetail['frequency_interval'])) {
+      // Everything matches - easy! Take a linked payment every time we take a master payment.
+      return self::updateNextScheduledDate($lDetail, $nextMasterScheduledDateString);
+    }
+    elseif (($lDetail['frequency_unit'] === 'month')
+            && ($mDetail['frequency_unit'] === $lDetail['frequency_unit'])
+            && ($lDetail['frequency_interval'] > $mDetail['frequency_interval'])) {
+      // We are only taking linked payment once every frequency_interval months(s)
+      $lastPaymentDateString = self::getLastPaymentDate($lDetail);
+      if (!$lastPaymentDateString) {
+        // First payment, we'll take it as soon as possible.
+        return self::updateNextScheduledDate($lDetail, $nextMasterScheduledDateString);
+      }
+      else {
+        // We need to calculate the next payment date based on last payment date and frequency
+        $lastPaymentDate = new DateTime($lastPaymentDateString);
+        // This returns a positive value if lastPaymentDate is earlier than nextMasterScheduledDate
+        $interval = $lastPaymentDate->diff($nextMasterScheduledDate);
+
+        $months = $interval->format('m');
+        if ($months >= $lDetail['frequency_interval']) {
+          // We've waited long enough, time to take another payment
+          return self::updateNextScheduledDate($lDetail, $nextMasterScheduledDateString);
+        }
+        if (($months > 0) && ($months < $lDetail['frequency_interval'])) {
+          // Calculate and update the next scheduled date
+          $nextScheduledDate = clone($nextMasterScheduledDate);
+          $nextScheduledDate->modify(new DateInterval('p' . $months . 'm'));
+          return self::updateNextScheduledDate($lDetail, $nextScheduledDate->format('Y-m-d H:i:s'));
+        }
+      }
+    }
+    elseif (($lDetail['frequency_unit'] === 'year') && ($mDetail['frequency_unit'] === 'month')) {
+      // We are only taking linked payment once every frequency_interval year(s)
+      $lastPaymentDateString = self::getLastPaymentDate($lDetail);
+      if (!$lastPaymentDateString) {
+        // First payment, we'll take it as soon as possible.
+        return self::updateNextScheduledDate($lDetail, $nextMasterScheduledDateString);
+      }
+      else {
+        // We need to calculate the next payment date based on last payment date and frequency
+        $lastPaymentDate = new DateTime($lastPaymentDateString);
+        // This returns a positive value if lastPaymentDate is earlier than nextMasterScheduledDate
+        $interval = $lastPaymentDate->diff($nextMasterScheduledDate);
+
+        $years = $interval->format('y');
+        if ($years >= $lDetail['frequency_interval']) {
+          // We've waited long enough, time to take another payment
+          return self::updateNextScheduledDate($lDetail, $nextMasterScheduledDateString);
+        }
+        if (($years > 0) && ($years < $lDetail['frequency_interval'])) {
+          // Calculate and update the next scheduled date
+          $nextScheduledDate = clone($nextMasterScheduledDate);
+          $nextScheduledDate->modify(new DateInterval('p' . $years . 'm'));
+          return self::updateNextScheduledDate($lDetail, $nextScheduledDate->format('Y-m-d H:i:s'));
+        }
+      }
+    }
+    elseif (($lDetail['frequency_unit'] === 'month') && ($mDetail['frequency_unit'] === 'year')) {
+      Civi::log()->error('recurmaster: Unsupported frequency for linked payments. Linked: ' . print_r($lDetail,TRUE) . ' Master: ' . print_r($mDetail, TRUE));
+      return FALSE;
+    }
+  }
+
+  /**
+   * Updates the next_sched_contribution_date for a recurring contribution via API
+   * @param $recur
+   * @param $nextScheduledDateString
+   *
+   * @return mixed
+   * @throws \CiviCRM_API3_Exception
+   */
+  private static function updateNextScheduledDate($recur, $nextScheduledDateString) {
+    $recur['next_sched_contribution_date'] = $nextScheduledDateString;
+    // Set the next scheduled date
+    civicrm_api3('ContributionRecur', 'create', $recur);
+    return $recur;
+  }
+
+  /** Get the date of the last payment for the linked recurring contribution
+   *
+   * @param array $lDetail Linked recurring details
+   * @return string|bool Last payment date as string or FALSE
+
+   * @throws \CiviCRM_API3_Exception
+   */
+  private static function getLastPaymentDate($lDetail) {
+    // Do we have a completed contribution?  Get the latest one if we do.
+    $contributionResult = civicrm_api3('Contribution', 'get', array(
+      'contribution_recur_id' => $lDetail['id'],
+      'contribution_status_id' => "Completed",
+      'options' => array('limit' => 1, 'sort' => "contribution_id DESC"),
+    ));
+    if (isset($contributionResult['id'])) {
+      $lastPaymentDateString = $contributionResult['values'][$contributionResult['id']]['receive_date'];
+      return $lastPaymentDateString;
+    }
+
+    // Otherwise, no payments have been taken, so we'll need to take this payment at the next available date.
+    return FALSE;
+
+  }
+
+  /**
+   * Is this recurring contribution a master?
+   * Yes, if it is one of the payment processor types listed in settings
+   *
+   * @param $recurId
+   *
+   * @return bool
+   * @throws \CiviCRM_API3_Exception
+   */
   public static function isMasterRecur($recurId) {
     // Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
-    $paymentProcessorTypes = explode(',', CRM_Recurmaster_Settings::getValue('paymentprocessortypes'));
+    $paymentProcessorTypes = (string) CRM_Recurmaster_Settings::getValue('paymentprocessortypes');
+    if (empty($paymentProcessorTypes)) {
+      return FALSE;
+    }
+    $paymentProcessorTypes = explode(',', $paymentProcessorTypes);
     $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', array(
       'return' => array("id"),
       'payment_processor_type_id' => array('IN' => $paymentProcessorTypes),
@@ -85,7 +270,7 @@ class CRM_Recurmaster_Master {
       'id' => $recurId,
     );
     try {
-      $contributionRecurRecord = civicrm_api3('ContributionRecur', 'getsingle', $recurParams);
+      civicrm_api3('ContributionRecur', 'getsingle', $recurParams);
     }
     catch (Exception $e) {
       return FALSE;
@@ -93,8 +278,15 @@ class CRM_Recurmaster_Master {
     return TRUE;
   }
 
-  public static function getMasterRecurringContributions($contactId = NULL) {
-    // Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
+  /**
+   * Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
+   *
+   * @param null $contactId
+   *
+   * @return array
+   * @throws \CiviCRM_API3_Exception
+   */
+  private static function getMasterRecurringContributionsbyContact($contactId = NULL) {
     $paymentProcessorTypes = explode(',', CRM_Recurmaster_Settings::getValue('paymentprocessortypes'));
     $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', array(
       'return' => array("id"),
@@ -119,8 +311,12 @@ class CRM_Recurmaster_Master {
 
   /**
    * Get list of recurring contribution records for contact
-   * @param $contactID
-   * @return mixed
+   *
+   * @param $contactId
+   * @param null $recurId
+   *
+   * @return array
+   * @throws \CiviCRM_API3_Exception
    */
   public static function getContactMasterRecurringContributionList($contactId, $recurId = NULL) {
     if ($recurId) {
@@ -134,7 +330,7 @@ class CRM_Recurmaster_Master {
       }
     }
     else {
-      $contributionRecurRecords = self::getMasterRecurringContributions($contactId);
+      $contributionRecurRecords = self::getMasterRecurringContributionsbyContact($contactId);
     }
 
     $cRecur = array();
