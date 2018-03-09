@@ -11,7 +11,7 @@ class CRM_Recurmaster_Utils {
    * @return mixed
    * @throws \CiviCRM_API3_Exception
    */
-  public static function getField($fieldName, $fullString = FALSE) {
+  public static function getField($fieldName, $fullString = TRUE) {
     if (!isset(Civi::$statics[__CLASS__][$fieldName])) {
       $field = civicrm_api3('CustomField', 'get', array(
         'name' => $fieldName,
@@ -37,7 +37,7 @@ class CRM_Recurmaster_Utils {
    * @return null|string
    * @throws \CiviCRM_API3_Exception
    */
-  public static function getMasterRecurIdCustomField($fullString = FALSE) {
+  public static function getMasterRecurIdCustomField($fullString = TRUE) {
     return self::getField('master_recur_id', $fullString);
   }
 

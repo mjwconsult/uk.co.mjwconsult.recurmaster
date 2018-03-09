@@ -25,9 +25,13 @@ Popup to configure linked recurring contribution:
 
 ![Link Popup](/docs/images/contact_tab_contribute_link_popup.png)
 
-## TODO:
-1. Calculate amount based on frequencies (ie. monthly will be taken every month, annual will only be taken once a year).
-1. Calculate immediately - automatic or as option?
-1. Trigger change on master upstream (eg. if amount changes update via Smartdebit API)
-1. UI - view recurring contribution should show custom fields - CORE
-1. UI - Add a new "Recurring contribution" tab - Extension
+## TODO
+#### Required:
+1. Test amount calculation (based on frequency).
+1. Calculate immediately - automatic or as option? Using hook_civicrm_post when a recur is updated?
+1. Trigger change on master upstream (eg. if amount changes update via Smartdebit API) - implement via hooks (see uk.co.mjwconsult.variablerecurpayments for an example).
+1. UI - view recurring contribution should show custom fields - CORE: https://github.com/civicrm/civicrm-core/pull/11697
+1. UI - add processor name to recurring contribution tab - CORE (may need refactoring to make it optional): https://github.com/civicrm/civicrm-core/pull/11765
+
+#### Optional:
+1. Optional: UI - Add a new "Recurring contribution" tab - Extension
