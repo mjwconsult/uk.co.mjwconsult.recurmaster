@@ -38,7 +38,7 @@ class CRM_Recurmaster_Settings {
 
   /**
    * Save settings. Accepts an array of name=>value pairs.  Name can be with or without prefix (it will be added if missing).
-   * @param array $values Array of settings and values with or without prefix (eg. array(variablerecurpayments_username => 'test')) to save
+   * @param array $values Array of settings and values with or without prefix (eg. array(recurmaster_username => 'test')) to save
    */
   public static function save($settings) {
     foreach ($settings as $name => $value) {

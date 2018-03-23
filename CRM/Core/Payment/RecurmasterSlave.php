@@ -57,8 +57,21 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @throws \CiviCRM_API3_Exception
    */
   public function doDirectPayment(&$params) {
-    $params = self::setRecurTransactionId($params);
+    self::setRecurTransactionId($params);
     return $params;
+  }
+
+  /**
+   * Change the subscription amount
+   *
+   * @param string $message
+   * @param array $params
+   *
+   * @return bool
+   * @throws \Exception
+   */
+  public function changeSubscriptionAmount(&$message = '', $params = array()) {
+    return self::setRecurTransactionId($params);
   }
 
   /**
@@ -69,7 +82,7 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @return mixed
    * @throws \CiviCRM_API3_Exception
    */
-  private static function setRecurTransactionId($params) {
+  private static function setRecurTransactionId(&$params) {
     if (!empty($params['contributionRecurID'])) {
       // Recurring transaction, so this is a recurring payment
       $recurParams['id'] = $params['contributionRecurID'];
@@ -77,13 +90,14 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
       // Update the recurring payment
       civicrm_api3('ContributionRecur', 'create', $recurParams);
       civicrm_api3('Job', 'process_recurmaster', array('recur_ids' => array($params['master_recur'])));
-    }
 
-    // We need to set this to ensure that contributions are set to the correct status
-    if (!empty($contributionParams['contribution_status_id'])) {
-      $params['payment_status_id'] = $contributionParams['contribution_status_id'];
+      // We need to set this to ensure that contributions are set to the correct status
+      if (!empty($contributionParams['contribution_status_id'])) {
+        $params['payment_status_id'] = $contributionParams['contribution_status_id'];
+      }
+      return TRUE;
     }
-    return $params;
+    return FALSE;
   }
 
   /**

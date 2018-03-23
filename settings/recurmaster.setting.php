@@ -22,7 +22,6 @@
  | GNU Affero General Public License or the licensing of CiviCRM,     |
  | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
  +-------------------------------------------------------------------*/
-
 return array(
   // Payment Processor Types
   'recurmaster_paymentprocessortypes' => array(
@@ -41,5 +40,38 @@ return array(
     'description' => 'Payment processor types that accept "Master" recurring contributions',
     'html_attributes' => array('multiple' => TRUE),
     'html_extra' => array(),
-  )
+  ),
+  // Dry Run
+  'recurmaster_dryrun' => array(
+    'admin_group' => 'recurmaster_debug',
+    'admin_grouptitle' => 'Debug Settings',
+    'admin_groupdescription' => 'Settings that can be used for debugging.',
+    'group_name' => 'Recurmaster Settings',
+    'group' => 'recurmaster',
+    'name' => 'recurmaster_dryrun',
+    'type' => 'Boolean',
+    'html_type' => 'Checkbox',
+    'default' => 0,
+    'add' => '4.7',
+    'is_domain' => 1,
+    'is_contact' => 0,
+    'description' => 'Dry Run - don\'t actually make any changes.',
+    'html_attributes' => array(),
+  ),
+  // Debugging
+  'recurmaster_debug' => array(
+    'admin_group' => 'recurmaster_debug',
+    'group_name' => 'Recurmaster Settings',
+    'group' => 'recurmaster',
+    'name' => 'recurmaster_debug',
+    'type' => 'Boolean',
+    'html_type' => 'Checkbox',
+    'default' => 0,
+    'add' => '4.7',
+    'is_domain' => 1,
+    'is_contact' => 0,
+    'description' => 'Extra Debug logging.',
+    'html_attributes' => array(),
+  ),
 );
+

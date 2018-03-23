@@ -186,3 +186,40 @@ function recurmaster_civicrm_links($op, $objectName, $objectId, &$links, &$mask,
       break;
   }
 }
+
+/**
+ * Implementation of hook_civicrm_smartdebit_alterCreateVariableDDIParams
+ * Called whenever a subscription at Smartdebit is being updated
+ *
+ * @param $recurParams
+ * @param $smartDebitParams
+ */
+function recurmaster_civicrm_smartdebit_alterVariableDDIParams(&$recurParams, &$smartDebitParams, $op) {
+  switch ($op) {
+    case 'create':
+    case 'update':
+      CRM_Recurmaster_Utils::log(__FUNCTION__ . ': recurParams: ' . print_r($recurParams, TRUE), TRUE);
+      // Calculate the regular payment amount
+      $nextAmount = $recurParams['amount'];
+      if ($nextAmount === NULL) {
+        return;
+      }
+      // Set the regular payment amount
+      CRM_Recurmaster_Smartdebit::alterDefaultPaymentAmount($smartDebitParams, $nextAmount);
+      CRM_Recurmaster_Utils::log(__FUNCTION__ . ': smartDebitParams: ' . print_r($smartDebitParams, TRUE));
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_civicrm_smartdebit_updateRecurringContribution
+ * Called when recurring contributions are updated by Smartdebit
+ *
+ * @param $recurContributionParams
+ *
+ * @throws \CiviCRM_API3_Exception
+ * @throws \Exception
+ */
+function recurmaster_civicrm_smartdebit_updateRecurringContribution(&$recurContributionParams) {
+  CRM_Recurmaster_Smartdebit::checkSubscription($recurContributionParams);
+}
