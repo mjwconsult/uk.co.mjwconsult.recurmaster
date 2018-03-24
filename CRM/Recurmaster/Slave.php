@@ -64,7 +64,7 @@ class CRM_Recurmaster_Slave {
       $slaveContributionParams[$key] = $masterContributionDetails[$key];
     }
     $slaveContributionParams['contribution_recur_id'] = $slaveRecurDetails['id'];
-    $slaveContributionParams['contribution_source'] = $slaveRecurDetails[CRM_Mjwshared_Fields::getCustomByName('description')];
+    $slaveContributionParams['contribution_source'] = $slaveRecurDetails[CRM_Recurmaster_Utils::getCustomByName('description')];
     $slaveContributionParams['financial_type_id'] = CRM_Recurmaster_Settings::getValue('slave_financial_type');
     $slaveContributionParams['total_amount'] = $slaveRecurDetails['amount'];
 

@@ -23,7 +23,4 @@
   <civix>
     <namespace>CRM/Recurmaster</namespace>
   </civix>
-  <requires>
-    <ext>uk.co.mjwconsult.mjwshared</ext>
-  </requires>
 </extension>
