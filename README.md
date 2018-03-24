@@ -35,13 +35,21 @@ Popup to configure linked recurring contribution:
 
   
 ## TODO
-#### Required:
+#### Implement:
+1. Update slave recur description on creation (contribution_source)
+
+#### Test:
+Some of this relies on the newly created test framework in org.civicrm.smartdebit
 1. Test amount calculation (based on frequency).
 1. Test trigger changes at smartdebit.
-1. Update slave contributions when master contribution is received. (via updateRecurring) (CRM_Recurmaster_Slave)
-1. Update slave recur description on creation (contribution_source)
-1. UI - view recurring contribution should show custom fields - CORE: https://github.com/civicrm/civicrm-core/pull/11697
-1. UI - add processor name to recurring contribution tab - CORE (may need refactoring to make it optional): https://github.com/civicrm/civicrm-core/pull/11765
+1. Test Update slave contributions when master contribution is received.
 
 #### Optional:
 1. Optional: UI - Add a new "Recurring contribution" tab - Extension
+
+## Installation
+Minimum CiviCRM version is 5.??
+
+Following CORE changes are required
+1. MERGED: UI - view recurring contribution should show custom fields - CORE: https://github.com/civicrm/civicrm-core/pull/11697
+1. OPTIONAL: UI - add processor name to recurring contribution tab - CORE (may need refactoring to make it optional): https://github.com/civicrm/civicrm-core/pull/11765
