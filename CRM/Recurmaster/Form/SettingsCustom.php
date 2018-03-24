@@ -43,6 +43,15 @@ class CRM_Recurmaster_Form_SettingsCustom extends CRM_Recurmaster_Form_Settings 
         }
         $form->add('select2', $name, ts($setting['description']), $paymentProcessorTypeOpts, FALSE, $setting['html_attributes']);
         break;
+      case 'slave_financial_type':
+        $form->addSelect('slave_financial_type',
+          array(
+            'entity' => 'contribution',
+            'label' => ts('Slave Contribution Financial Type'),
+            'placeholder'  => NULL,
+          )
+        );
+        break;
     }
   }
 

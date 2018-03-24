@@ -38,7 +38,8 @@ Popup to configure linked recurring contribution:
 #### Required:
 1. Test amount calculation (based on frequency).
 1. Test trigger changes at smartdebit.
-1. Update slave contributions when master contribution is received. (via updateRecurring)
+1. Update slave contributions when master contribution is received. (via updateRecurring) (CRM_Recurmaster_Slave)
+1. Update slave recur description on creation (contribution_source)
 1. UI - view recurring contribution should show custom fields - CORE: https://github.com/civicrm/civicrm-core/pull/11697
 1. UI - add processor name to recurring contribution tab - CORE (may need refactoring to make it optional): https://github.com/civicrm/civicrm-core/pull/11765
 

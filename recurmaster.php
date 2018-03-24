@@ -197,7 +197,7 @@ function recurmaster_civicrm_links($op, $objectName, $objectId, &$links, &$mask,
 function recurmaster_civicrm_smartdebit_alterVariableDDIParams(&$recurParams, &$smartDebitParams, $op) {
   switch ($op) {
     case 'create':
-    case 'update':
+    case 'edit':
       CRM_Recurmaster_Utils::log(__FUNCTION__ . ': recurParams: ' . print_r($recurParams, TRUE), TRUE);
       // Calculate the regular payment amount
       $nextAmount = $recurParams['amount'];
@@ -223,3 +223,28 @@ function recurmaster_civicrm_smartdebit_alterVariableDDIParams(&$recurParams, &$
 function recurmaster_civicrm_smartdebit_updateRecurringContribution(&$recurContributionParams) {
   CRM_Recurmaster_Smartdebit::checkSubscription($recurContributionParams);
 }
+
+/**
+ * If a contribution is created/edited create/edit the slave contributions
+ * @param $op
+ * @param $objectName
+ * @param $objectId
+ * @param $objectRef
+ */
+function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
+  if ($objectName !== 'Contribution') {
+    return;
+  }
+  if (empty($objectRef->contribution_recur_id)) {
+    return;
+  }
+  if (!in_array($op, array('create', 'edit'))) {
+    return;
+  }
+  if (CRM_Recurmaster_Master::isMasterRecur($objectRef->contribution_recur_id)) {
+    $contributionDetails = json_decode(json_encode($objectRef),TRUE);
+    CRM_Recurmaster_Slave::updateAllByMasterContribution($contributionDetails);
+  }
+
+}
+

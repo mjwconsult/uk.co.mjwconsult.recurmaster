@@ -41,6 +41,22 @@ return array(
     'html_attributes' => array('multiple' => TRUE),
     'html_extra' => array(),
   ),
+  // financial_type
+  'recurmaster_slave_financial_type' => array(
+    'admin_group' => 'recurmaster_paymentprocessor',
+    'group_name' => 'Recurmaster Settings',
+    'group' => 'recurmaster',
+    'name' => 'recurmaster_slave_financial_type',
+    'type' => 'Integer',
+    'html_type' => 'Select',
+    'default' => 0,
+    'add' => '4.7',
+    'is_domain' => 1,
+    'is_contact' => 0,
+    'description' => 'Default Financial Type for Slave Contributions',
+    'html_attributes' => array(),
+  ),
+
   // Dry Run
   'recurmaster_dryrun' => array(
     'admin_group' => 'recurmaster_debug',

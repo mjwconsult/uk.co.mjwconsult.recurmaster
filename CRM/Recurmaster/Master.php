@@ -61,7 +61,7 @@ class CRM_Recurmaster_Master {
    * @return array|null
    * @throws \CiviCRM_API3_Exception
    */
-  private static function getLinkedRecurring($masterId) {
+  public static function getLinkedRecurring($masterId) {
     $contributionRecurParams = array(
       CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE) => $masterId,
       'options' => array('limit' => 0),
