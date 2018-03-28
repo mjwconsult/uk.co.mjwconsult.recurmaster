@@ -37,11 +37,35 @@ class CRM_ExampleTest extends \PHPUnit_Framework_TestCase implements HeadlessInt
 
   public function setUp() {
     parent::setUp();
-    $this->smartdebitPaymentProcessorCreate();
+    $this->_masterProcessorId = $this->smartdebitPaymentProcessorCreate();
+    $this->_slaveProcessorId = $this->slavePaymentProcessorCreate();
   }
 
   public function tearDown() {
     parent::tearDown();
+  }
+
+  public function slavePaymentProcessorCreate($params = array()) {
+    $paymentProcessorType = $this->callAPISuccess('PaymentProcessorType', 'get', array('name' => "recurmaster_slave"));
+    $processorParams = array(
+      'domain_id' => '1',
+      'name' => 'Slave',
+      'payment_processor_type_id' => $paymentProcessorType['id'],
+      'is_active' => '1',
+      'is_test' => '0',
+      'user_name' => 'slave',
+      'password' => 'slave',
+      'url_site' => 'https://example.org',
+      'url_recur' => 'https://example.org',
+      'class_name' => 'Payment_RecurmasterSlave',
+      'billing_mode' => '1',
+      'is_recur' => '1',
+      'payment_type' => '1',
+      'payment_instrument_id' => 'Debit Card'
+    );
+    $processorParams = array_merge($processorParams, $params);
+    $processor = $this->callAPISuccess('PaymentProcessor', 'create', $processorParams);
+    return $processor['id'];
   }
 
   /**
