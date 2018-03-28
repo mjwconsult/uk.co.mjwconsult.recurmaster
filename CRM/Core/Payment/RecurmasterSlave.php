@@ -87,15 +87,10 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
       // Recurring transaction, so this is a recurring payment
       $recurParams['id'] = $params['contributionRecurID'];
       $recurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)] = $params['master_recur'];
-      $recurParams[CRM_Recurmaster_Utils::getCustomByName('description')] = $params['source'];
+      $recurParams[CRM_Recurmaster_Utils::getCustomByName('description')] = $params['description'];
       // Update the recurring payment
       civicrm_api3('ContributionRecur', 'create', $recurParams);
       civicrm_api3('Job', 'process_recurmaster', array('recur_ids' => array($params['master_recur'])));
-
-      // We need to set this to ensure that contributions are set to the correct status
-      if (!empty($params['contribution_status_id'])) {
-        $params['payment_status_id'] = $params['contribution_status_id'];
-      }
       return TRUE;
     }
     return FALSE;
@@ -217,6 +212,9 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    */
   public function getPaymentFormFieldsMetadata() {
     $contactId = CRM_Utils_Request::retrieve('cid', 'Integer');
+    if (!isset($contactId)) {
+      $contactId = CRM_Core_Session::singleton()->getLoggedInContactID();
+    }
     $masterRecurs = array();
     if (!empty($contactId)) {
       $masterRecurs = CRM_Recurmaster_Master::getContactMasterRecurringContributionList($contactId);

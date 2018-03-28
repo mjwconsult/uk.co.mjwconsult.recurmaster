@@ -11,6 +11,9 @@ class CRM_Recurmaster_Slave {
    */
   public static function updateAllByMasterContribution($masterContributionDetails) {
     $linkedRecurs = CRM_Recurmaster_Master::getLinkedRecurring($masterContributionDetails['contribution_recur_id']);
+    if (!$linkedRecurs) {
+      return;
+    }
     foreach ($linkedRecurs as $linkedRecurDetails) {
       self::update($masterContributionDetails, $linkedRecurDetails);
     }

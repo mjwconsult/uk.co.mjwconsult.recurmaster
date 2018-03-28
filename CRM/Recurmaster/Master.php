@@ -298,6 +298,7 @@ class CRM_Recurmaster_Master {
     $recurParams = array(
       'payment_processor_id' => array('IN' => $paymentProcessorIds),
       'options' => array('limit' => 0),
+      'contribution_status_id' => array('IN' => array("In Progress", "Pending")),
     );
     if (!empty($contactId)) {
       $recurParams['contact_id'] = $contactId;
