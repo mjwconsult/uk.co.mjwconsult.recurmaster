@@ -205,7 +205,7 @@ function recurmaster_civicrm_smartdebit_alterVariableDDIParams(&$recurParams, &$
         return;
       }
       // Set the regular payment amount
-      CRM_Recurmaster_Smartdebit::alterDefaultPaymentAmount($smartDebitParams, $nextAmount);
+      CRM_Recurmaster_Payment_Smartdebit::alterDefaultPaymentAmount($smartDebitParams, $nextAmount);
       CRM_Recurmaster_Utils::log(__FUNCTION__ . ': smartDebitParams: ' . print_r($smartDebitParams, TRUE));
       break;
   }
@@ -221,7 +221,7 @@ function recurmaster_civicrm_smartdebit_alterVariableDDIParams(&$recurParams, &$
  * @throws \Exception
  */
 function recurmaster_civicrm_smartdebit_updateRecurringContribution(&$recurContributionParams) {
-  CRM_Recurmaster_Smartdebit::checkSubscription($recurContributionParams);
+  CRM_Recurmaster_Payment::checkSubscription($recurContributionParams);
 }
 
 /**
