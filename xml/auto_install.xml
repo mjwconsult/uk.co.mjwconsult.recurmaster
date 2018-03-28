@@ -22,7 +22,7 @@
   <CustomFields>
     <CustomField>
       <name>master_recur_id</name>
-      <label>master_recur_id</label>
+      <label>Master Recurring Contribution</label>
       <data_type>Int</data_type>
       <html_type>Text</html_type>
       <is_required>0</is_required>
