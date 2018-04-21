@@ -232,19 +232,91 @@ function recurmaster_civicrm_smartdebit_updateRecurringContribution(&$recurContr
  * @param $objectRef
  */
 function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
-  if ($objectName !== 'Contribution') {
-    return;
-  }
-  if (empty($objectRef->contribution_recur_id)) {
-    return;
-  }
-  if (!in_array($op, array('create', 'edit'))) {
-    return;
-  }
-  if (CRM_Recurmaster_Master::isMasterRecur($objectRef->contribution_recur_id)) {
-    $contributionDetails = json_decode(json_encode($objectRef),TRUE);
-    CRM_Recurmaster_Slave::updateAllByMasterContribution($contributionDetails);
-  }
+  switch ($objectName) {
+    case 'Contribution':
+      if (empty($objectRef->contribution_recur_id)) {
+        return;
+      }
+      if (!in_array($op, array('create', 'edit'))) {
+        return;
+      }
+      $contributionDetails = json_decode(json_encode($objectRef), TRUE);
+      if (CRM_Recurmaster_Master::isMasterRecur($contributionDetails['contribution_recur_id'])) {
+        if ($op === 'create') {
+          // Add a callback to update the master contribution once we've finished here
+          CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT,
+            'recurmaster_callback_civicrm_post', array(array('entity' => $objectName, 'op' => $op, 'id' => $contributionDetails['id'])));
+        }
+        CRM_Recurmaster_Slave::updateAllByMasterContribution($contributionDetails);
+      }
+      break;
 
+    case 'ContributionRecur':
+      if ($op !== 'create') {
+        return;
+      }
+      $contributionRecurDetails = json_decode(json_encode($objectRef), TRUE);
+      if (!CRM_Recurmaster_Master::isMasterRecur($contributionRecurDetails['id'])) {
+        return;
+      }
+
+      // Create a new slave recurring contribution to match the newly created master recur
+
+      // Add the master ID to the slave processor
+      $contributionRecurDetails[CRM_Recurmaster_Utils::getMasterRecurIdCustomField()] = $contributionRecurDetails['id'];
+      // Add a callback to update the master recur once we've finished here
+      CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT,
+        'recurmaster_callback_civicrm_post', array(array('entity' => $objectName, 'op' => $op, 'id' => $contributionRecurDetails['id'])));
+
+      // Remove fields we don't want to copy from master to slave
+      $fieldsToUnset = array('id', 'trxn_id', 'invoice_id');
+      foreach ($fieldsToUnset as $field) {
+        unset($contributionRecurDetails[$field]);
+      }
+      // Get the id of the first slave payment processor (we only support one).
+      try {
+        $slaveProcessor = civicrm_api3('PaymentProcessor', 'getsingle', array(
+          'payment_processor_type_id' => "recurmaster_slave",
+          'options' => array('limit' => 1, 'sort' => "id ASC"),
+        ));
+      }
+      catch (Exception $e) {
+        Civi::log()->error('You must create a slave payment processor to use master recurring payments');
+        return;
+      }
+      $contributionRecurDetails['payment_processor_id'] = $slaveProcessor['id'];
+      civicrm_api3('ContributionRecur', 'create', $contributionRecurDetails);
+
+      break;
+  }
+}
+
+/**
+ * Callback function for hook_civicrm_post
+ *
+ * @param $params
+ *
+ * @throws \CiviCRM_API3_Exception
+ */
+function recurmaster_callback_civicrm_post($params) {
+  switch ($params['entity']) {
+    case 'ContributionRecur':
+      // Update the master recur financial type to the configured type
+      $masterContributionRecurParams = array(
+        'id' => $params['id'],
+        'financial_type_id' => CRM_Recurmaster_Settings::getValue('master_financial_type'),
+      );
+      civicrm_api3('ContributionRecur', 'create', $masterContributionRecurParams);
+      break;
+
+    case 'Contribution':
+      // Update the master contribution financial type to the configured type
+      $masterContributionParams = array(
+        'id' => $params['id'],
+        'financial_type_id' => CRM_Recurmaster_Settings::getValue('master_financial_type'),
+      );
+      civicrm_api3('Contribution', 'create', $masterContributionParams);
+      break;
+  }
 }
 

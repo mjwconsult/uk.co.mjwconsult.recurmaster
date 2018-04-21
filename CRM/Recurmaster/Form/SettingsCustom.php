@@ -41,13 +41,19 @@ class CRM_Recurmaster_Form_SettingsCustom extends CRM_Recurmaster_Form_Settings 
         foreach ($paymentProcessorTypes['values'] as $key => $value) {
           $paymentProcessorTypeOpts[] = array('id' => $key, 'text' => $value['title']);
         }
-        $form->add('select2', $name, ts($setting['description']), $paymentProcessorTypeOpts, FALSE, $setting['html_attributes']);
+        $form->add('select2', $name, $setting['description'], $paymentProcessorTypeOpts, FALSE, $setting['html_attributes']);
         break;
-      case 'slave_financial_type':
-        $form->addSelect('slave_financial_type',
+    }
+  }
+
+  public static function addSelectElement(&$form, $name, $setting) {
+    switch ($name) {
+      case 'master_financial_type':
+        $form->addSelect($name,
           array(
             'entity' => 'contribution',
-            'label' => ts('Slave Contribution Financial Type'),
+            'label' => $setting['description'],
+            'field' => 'financial_type_id',
             'placeholder'  => NULL,
           )
         );

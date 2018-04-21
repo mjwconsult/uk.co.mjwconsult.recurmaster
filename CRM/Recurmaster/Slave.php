@@ -8,6 +8,8 @@ class CRM_Recurmaster_Slave {
    * We assume that the master actually took the full amount
    *
    * @param $masterRecurId
+   *
+   * @throws \CiviCRM_API3_Exception
    */
   public static function updateAllByMasterContribution($masterContributionDetails) {
     $linkedRecurs = CRM_Recurmaster_Master::getLinkedRecurring($masterContributionDetails['contribution_recur_id']);
@@ -39,7 +41,7 @@ class CRM_Recurmaster_Slave {
     $slaveRecurNextScheduledDT = new DateTime($slaveRecurDetails['next_sched_contribution_date']);
 
     if ($masterContributionDT->format('Ymd') !== $slaveRecurNextScheduledDT->format('Ymd')) {
-      CRM_Recurmaster_Slave::log(__FUNCTION__ . ' Master contribution date does not match slave next scheduled date SR=' . $slaveRecurDetails['id'], TRUE);
+      CRM_Recurmaster_Utils::log(__FUNCTION__ . ' Master contribution date does not match slave next scheduled date SR=' . $slaveRecurDetails['id'], TRUE);
       return;
     }
 
@@ -68,15 +70,21 @@ class CRM_Recurmaster_Slave {
     }
     $slaveContributionParams['contribution_recur_id'] = $slaveRecurDetails['id'];
     $slaveContributionParams['contribution_source'] = $slaveRecurDetails[CRM_Recurmaster_Utils::getCustomByName('description')];
-    $slaveContributionParams['financial_type_id'] = CRM_Recurmaster_Settings::getValue('slave_financial_type');
+    // If we don't have a description for the slave recur, copy it from the master contribution.
+    if (empty($slaveContributionParams['contribution_source']) && !empty($masterContributionDetails['source'])) {
+      $slaveRecurDetails[CRM_Recurmaster_Utils::getCustomByName('description')] = $masterContributionDetails['source'];
+      civicrm_api3('ContributionRecur', 'create', $slaveRecurDetails);
+    }
     $slaveContributionParams['total_amount'] = $slaveRecurDetails['amount'];
+    // We always inherit the financial type from the recur
+    $slaveContributionParams['financial_type_id'] = $slaveRecurDetails['financial_type_id'];
 
     // Create/Edit slave contribution
     try {
-      $contributionResult = civicrm_api3('Contribution', 'create', $slaveContributionParams);
+      civicrm_api3('Contribution', 'create', $slaveContributionParams);
     }
     catch (Exception $e) {
-      CRM_Recurmaster_Utils::log(__FUNCTION__ . ' Unable to create contribution for slave R=' . $slaveRecurDetails['id']);
+      CRM_Recurmaster_Utils::log(__FUNCTION__ . ' Unable to create contribution for slave R=' . $slaveRecurDetails['id'], FALSE);
     }
   }
 }

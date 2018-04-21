@@ -36,7 +36,7 @@ Popup to configure linked recurring contribution:
   
 ## TODO
 #### Implement:
-1. Update slave recur description on creation (contribution_source)
+1. Sales Tax gets double-added on contribution when creating a new master (appears to work correctly on recur).
 
 #### Test:
 Some of this relies on the newly created test framework in org.civicrm.smartdebit
@@ -52,4 +52,4 @@ Minimum CiviCRM version is 5.??
 
 Following CORE changes are required
 1. MERGED: UI - view recurring contribution should show custom fields - CORE: https://github.com/civicrm/civicrm-core/pull/11697
-1. OPTIONAL: UI - add processor name to recurring contribution tab - CORE (may need refactoring to make it optional): https://github.com/civicrm/civicrm-core/pull/11765
+1. OPTIONAL: UI - add processor name to recurring contribution tab - CORE (may need refactoring to make it optional): https://github.com/civicrm/civicrm-core/pull/11765 (included as override in this extension via tpl).
