@@ -27,6 +27,24 @@ function recurmaster_civicrm_xmlMenu(&$files) {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_install
  */
 function recurmaster_civicrm_install() {
+  // Enable MembershipType custom data
+  $optionValue = [
+    'name' => 'civicrm_membership_type',
+    'label' => 'Membership Types',
+    'value' => 'MembershipType',
+  ];
+  $optionValues = civicrm_api3('OptionValue', 'get', [
+    'option_group_id' => 'cg_extend_objects',
+    'name' => $optionValue['name'],
+  ]);
+  if (!$optionValues['count']) {
+    civicrm_api3('OptionValue', 'create', [
+      'option_group_id' => 'cg_extend_objects',
+      'name' => $optionValue['name'],
+      'label' => $optionValue['label'],
+      'value' => $optionValue['value'],
+    ]);
+  }
   _recurmaster_civix_civicrm_install();
 }
 
