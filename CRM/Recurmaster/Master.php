@@ -99,7 +99,7 @@ class CRM_Recurmaster_Master {
     $linkedDate->setTime(0,0,0,0);
     $masterDate->setTime(0,0,0,0);
     // Do the next scheduled contribution dates match for linked and master?
-    if ($linkedDate === $masterDate) {
+    if ($linkedDate == $masterDate) {
       return TRUE;
     }
 
@@ -118,10 +118,6 @@ class CRM_Recurmaster_Master {
    * @throws \Exception
    */
   private static function setNextPaymentDate($lDetail, $mDetail) {
-    if (!empty($lDetail['next_sched_contribution_date'])) {
-      return FALSE;
-    }
-
     if (empty($mDetail['next_sched_contribution_date'])) {
       Civi::log()->error('recurmaster: Cannot use as master if next_sched_contribution_date is not set R' . $mDetail['id']);
       return FALSE;
