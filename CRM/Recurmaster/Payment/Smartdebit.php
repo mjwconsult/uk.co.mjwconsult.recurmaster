@@ -36,10 +36,11 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
     }
 
     // Get mandate details
-    $smartDebitParams = CRM_Smartdebit_Mandates::getbyReference($recurContributionParams['trxn_id'], TRUE);
-    if (empty($smartDebitParams) || !is_array($smartDebitParams)) {
+    $smartDebitMandate = civicrm_api3('Smartdebit', 'getmandates', $recurContributionParams);
+    if ($smartDebitMandate['count'] !== 1) {
       return;
     }
+    $smartDebitParams = $smartDebitMandate['values'][$smartDebitMandate['id']];
 
     // Only update Live/New direct debits
     if (($smartDebitParams['current_state'] != CRM_Smartdebit_Api::SD_STATE_NEW) && ($smartDebitParams['current_state'] != CRM_Smartdebit_Api::SD_STATE_LIVE)) {

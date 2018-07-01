@@ -1,6 +1,9 @@
 # uk.co.mjwconsult.recurmaster (Master Recurring Contributions)
 
 Allow multiple recurring contributions to be linked to a single "Master" for collection.
+
+## Requirements
+Version 0.3: Requires org.civicrm.smartdebit >= 1.24
  
 ## API
 The following API functions are implemented:
