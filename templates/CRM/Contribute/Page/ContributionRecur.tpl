@@ -73,6 +73,7 @@
             <th scope="col">{ts}Installments{/ts}</th>
             <th scope="col">{ts}Status{/ts}</th>
             <th scope="col">{ts}Processor{/ts}</th>
+            <th scope="col">{ts}TransactionID{/ts}</th>
             <th scope="col"></th>
         </tr>
 
@@ -85,6 +86,7 @@
                 <td>{$row.installments}</td>
                 <td>{$row.contribution_status}</td>
                 <td>{$row.payment_processor}</td>
+                <td>{$row.trxn_id}</td>
                 <td>{$row.action|replace:'xx':$row.recurId}</td>
             </tr>
         {/foreach}
