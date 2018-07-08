@@ -359,3 +359,29 @@ function recurmaster_callback_civicrm_post($params) {
   }
 }
 
+/**
+ * Intercept form functions
+ * @param $formName
+ * @param $form
+ */
+function recurmaster_civicrm_buildForm($formName, &$form) {
+  if ($formName = 'CRM_Contribute_Form_UpdateSubscription') {
+    $recurId = $form->getVar('contributionRecurID');
+    if (empty($recurId)) {
+      return;
+    }
+    if (CRM_Recurmaster_Master::isMasterRecur($recurId)) {
+      // Ok, this is a master recur.  Freeze some fields that should not be modified
+      $form->getElement('amount')->freeze();
+      $form->getElement('installments')->freeze();
+      $form->removeElement('start_date');
+    }
+    elseif(CRM_Recurmaster_Slave::isSlaveRecur($recurId)) {
+      // This is a slave recur.
+      $form->removeElement('start_date');
+    }
+
+  }
+}
+
+

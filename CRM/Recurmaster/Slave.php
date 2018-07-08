@@ -87,4 +87,29 @@ class CRM_Recurmaster_Slave {
       CRM_Recurmaster_Utils::log(__FUNCTION__ . ' Unable to create contribution for slave R=' . $slaveRecurDetails['id'], FALSE);
     }
   }
+
+  /**
+   * Is this recurring contribution of type "Slave"?
+   * @param $recurId
+   *
+   * @return bool
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function isSlaveRecur($recurId) {
+    try {
+      $contributionRecur = civicrm_api3('ContributionRecur', 'getsingle', [
+        'id' => $recurId,
+      ]);
+    }
+    catch (Exception $e) {
+      return FALSE;
+    }
+
+    $paymentProcessor = \Civi\Payment\System::singleton()->getById($contributionRecur['payment_processor_id']);
+    if ($paymentProcessor->getPaymentProcessor()['class_name'] == 'Payment_RecurmasterSlave') {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
 }

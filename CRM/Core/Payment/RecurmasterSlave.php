@@ -51,6 +51,35 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
   }
 
   /**
+   * Are back office payments supported.
+   *
+   * @return bool
+   */
+  public function supportsBackOffice() {
+    return TRUE;
+  }
+
+  /**
+   * Checks if backoffice recurring edit is allowed
+   *
+   * @return bool
+   */
+  public function supportsEditRecurringContribution() {
+    return TRUE;
+  }
+
+  /**
+   * Should the first payment date be configurable when setting up back office recurring payments.
+   *
+   * We set this to false for historical consistency but in fact most new processors use tokens for recurring and can support this
+   *
+   * @return bool
+   */
+  protected function supportsFutureRecurStartDate() {
+    return FALSE;
+  }
+
+  /**
    * @param  array $params assoc array of input parameters for this transaction
    *
    * @return array the result in a nice formatted array (or an error object)
@@ -124,35 +153,6 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @throws \Exception
    */
   public function cancelSubscription($params = array()) {
-    return TRUE;
-  }
-
-  /** 
-   * Are back office payments supported.
-   *
-   * @return bool
-   */
-  public function supportsBackOffice() {
-    return TRUE;
-  }
-
-  /**
-   * Checks if backoffice recurring edit is allowed
-   *
-   * @return bool
-   */
-  public function supportsEditRecurringContribution() {
-    return TRUE;
-  }
-
-  /**
-   * Should the first payment date be configurable when setting up back office recurring payments.
-   *
-   * We set this to false for historical consistency but in fact most new processors use tokens for recurring and can support this
-   *
-   * @return bool
-   */
-  protected function supportsFutureRecurStartDate() {
     return TRUE;
   }
 

@@ -51,6 +51,18 @@ class CRM_Recurmaster_Master {
       if ($contributionRecur != $originalContributionRecur) {
         Civi::log()->debug('CRM_Recurmaster_Master::update: Calculated amount for R' . $contributionRecur['id'] . ' is ' . $contributionRecur['amount']);
         $recurResult = civicrm_api3('ContributionRecur', 'create', $contributionRecur);
+
+        $paymentProcessor = Civi\Payment\System::singleton()->getById($contributionRecur['payment_processor_id']);
+        if ($paymentProcessor->supports('EditRecurringContribution')) {
+          $message = '';
+          $updateSubscription = $paymentProcessor->changeSubscriptionAmount($message, $contributionRecur);
+        }
+        if (is_a($updateSubscription, 'CRM_Core_Error')) {
+          CRM_Core_Error::displaySessionError($updateSubscription);
+          $status = ts('Could not update the Recurring contribution details');
+          $msgTitle = ts('Update Error');
+          $msgType = 'error';
+        }
       }
       $recurs = CRM_Utils_Array::value('values', $recurResult);
     }
