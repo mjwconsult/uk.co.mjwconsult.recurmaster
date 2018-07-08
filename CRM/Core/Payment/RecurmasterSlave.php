@@ -71,6 +71,25 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @throws \Exception
    */
   public function changeSubscriptionAmount(&$message = '', $params = array()) {
+    // We need to set contributionRecurID for setRecurTransactionId as that is passed when triggered via doDirectPayment()
+    $params['contributionRecurID'] = $params['id'];
+    try {
+      $recurRecord = civicrm_api3('ContributionRecur', 'getsingle', array(
+        'id' => $params['id'],
+        'options' => array('limit' => 1),
+      ));
+    }
+    catch (CiviCRM_API3_Exception $e) {
+      CRM_Core_Error::statusBounce('No recurring record! ' . $e->getMessage());
+      return FALSE;
+    }
+
+    $recurRecord['master_recur'] = $recurRecord[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)];
+    $recurRecord['description'] = $recurRecord[CRM_Recurmaster_Utils::getCustomByName('description')];
+    $recurRecord['contributionRecurID'] = $recurRecord['id'];
+
+    $params = array_merge($recurRecord, $params);
+
     return self::setRecurTransactionId($params);
   }
 
@@ -85,11 +104,11 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
   private static function setRecurTransactionId(&$params) {
     if (!empty($params['contributionRecurID'])) {
       // Recurring transaction, so this is a recurring payment
-      $recurParams['id'] = $params['contributionRecurID'];
-      $recurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)] = $params['master_recur'];
-      $recurParams[CRM_Recurmaster_Utils::getCustomByName('description')] = $params['description'];
+      $params['id'] = $params['contributionRecurID'];
+      $params[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)] = $params['master_recur'];
+      $params[CRM_Recurmaster_Utils::getCustomByName('description')] = $params['description'];
       // Update the recurring payment
-      civicrm_api3('ContributionRecur', 'create', $recurParams);
+      civicrm_api3('ContributionRecur', 'create', $params);
       civicrm_api3('Job', 'process_recurmaster', array('recur_ids' => array($params['master_recur'])));
       return TRUE;
     }
