@@ -270,7 +270,7 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
       break;
 
     case 'ContributionRecur':
-      if ($op !== 'create') {
+      if (($op !== 'create') && ($op !== 'edit')) {
         return;
       }
       $contributionRecurDetails = json_decode(json_encode($objectRef), TRUE);
@@ -283,8 +283,21 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
       // Add the master ID to the slave processor
       $contributionRecurDetails[CRM_Recurmaster_Utils::getMasterRecurIdCustomField()] = $contributionRecurDetails['id'];
       // Add a callback to update the master recur once we've finished here
-      CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT,
-        'recurmaster_callback_civicrm_post', array(array('entity' => $objectName, 'op' => $op, 'id' => $contributionRecurDetails['id'])));
+      $callbackParams = [
+        'entity' => $objectName,
+        'op' => $op,
+        'id' => $contributionRecurDetails['id'],
+      ];
+      if (CRM_Core_Transaction::isActive()) {
+        CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT, 'recurmaster_callback_civicrm_post', [$callbackParams]);
+      }
+      else {
+        recurmaster_callback_civicrm_post($callbackParams);
+      }
+
+      if ($op == 'edit') {
+        return;
+      }
 
       // Remove fields we don't want to copy from master to slave
       $fieldsToUnset = array('id', 'trxn_id', 'invoice_id');
@@ -319,12 +332,20 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
 function recurmaster_callback_civicrm_post($params) {
   switch ($params['entity']) {
     case 'ContributionRecur':
-      // Update the master recur financial type to the configured type
-      $masterContributionRecurParams = array(
-        'id' => $params['id'],
-        'financial_type_id' => CRM_Recurmaster_Settings::getValue('master_financial_type'),
-      );
-      civicrm_api3('ContributionRecur', 'create', $masterContributionRecurParams);
+      if ($params['op'] == 'create') {
+        // Update the master recur financial type to the configured type
+        $masterContributionRecurParams = array(
+          'id' => $params['id'],
+          'financial_type_id' => CRM_Recurmaster_Settings::getValue('master_financial_type'),
+        );
+        civicrm_api3('ContributionRecur', 'create', $masterContributionRecurParams);
+      }
+      elseif ($params['op'] == 'edit') {
+        // Calculate the master amount.  If it has changed, update the recur
+        civicrm_api3('Job', 'process_recurmaster', [
+          'recur_ids' => $params['id'],
+        ]);
+      }
       break;
 
     case 'Contribution':

@@ -25,18 +25,20 @@ class CRM_Recurmaster_Master {
         'options' => array('limit' => 0),
       );
       $contributionRecurs = civicrm_api3('ContributionRecur', 'get', $contributionRecurParams);
+      $contributionRecurs = CRM_Utils_Array::value('values', $contributionRecurs);
     }
     else {
       $contributionRecurs = self::getMasterRecurringContributionsbyContact();
     }
 
-    if (empty($contributionRecurs['values'])) {
+    if (empty($contributionRecurs)) {
       Civi::log()->info('CRM_Recurmaster_Master: No master recurring contributions for processing');
       return array();
     }
 
     $recurs = array();
-    foreach ($contributionRecurs['values'] as $id => $contributionRecur) {
+    foreach ($contributionRecurs as $id => $contributionRecur) {
+      $originalContributionRecur = $contributionRecur;
       $linkedRecurs = self::getLinkedRecurring($id);
       $amount = 0;
       foreach ($linkedRecurs as $lId => &$lDetail) {
@@ -46,8 +48,10 @@ class CRM_Recurmaster_Master {
         }
       }
       $contributionRecur['amount'] = $amount;
-      Civi::log()->debug('CRM_Recurmaster_Master::update: Calculated amount for R' . $contributionRecur['id'] . ' is ' . $contributionRecur['amount']);
-      $recurResult = civicrm_api3('ContributionRecur', 'create', $contributionRecur);
+      if ($contributionRecur != $originalContributionRecur) {
+        Civi::log()->debug('CRM_Recurmaster_Master::update: Calculated amount for R' . $contributionRecur['id'] . ' is ' . $contributionRecur['amount']);
+        $recurResult = civicrm_api3('ContributionRecur', 'create', $contributionRecur);
+      }
       $recurs = CRM_Utils_Array::value('values', $recurResult);
     }
     return $recurs;
