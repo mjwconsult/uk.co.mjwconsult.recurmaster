@@ -169,7 +169,7 @@ function recurmaster_civicrm_links($op, $objectName, $objectId, &$links, &$mask,
           $crid = $values['crid'];
           $cid = $values['cid'];
 
-          if (CRM_Recurmaster_Master::isMasterRecur($crid)) {
+          if (CRM_Recurmaster_Master::isMasterRecurByRecurId($crid)) {
             // We are a "Master" recurring contribution, so don't allow linking to others!
             return;
           }
@@ -239,7 +239,63 @@ function recurmaster_civicrm_smartdebit_alterVariableDDIParams(&$recurParams, &$
  * @throws \Exception
  */
 function recurmaster_civicrm_smartdebit_updateRecurringContribution(&$recurContributionParams) {
+  if (!CRM_Recurmaster_Master::isMasterRecurByPaymentProcessorId($recurContributionParams['payment_processor_id'])) {
+    return;
+  }
+  // This is a master recur
+  // Update the master recur financial type to the configured type
+  $recurContributionParams['financial_type_id'] = CRM_Recurmaster_Settings::getValue('master_financial_type');
+  // We don't allow changing frequency of master, so force it here
+  $recurContributionParams['frequency_unit'] = 'month';
+  $recurContributionParams['frequency_interval'] = '1';
+
+  if (!empty(Civi::$statics['recurmaster']['slave']['id'])) {
+    // We have just created a linked slave recur for this master recur.
+    // Update some params on the slave.
+    $slaveRecurParams = civicrm_api3('ContributionRecur', 'getsingle', ['id' => Civi::$statics['recurmaster']['slave']['id']]);
+
+    if (CRM_Recurmaster_Utils::dateLessThan($slaveRecurParams['start_date'], $recurContributionParams['start_date'])) {
+      $slaveRecurParams['start_date'] = $recurContributionParams['start_date'];
+      civicrm_api3('ContributionRecur', 'create', $slaveRecurParams);
+    }
+    $masterContributionDetails = civicrm_api3('Contribution', 'getsingle', ['id' => Civi::$statics['recurmaster']['master']['contribution_id']]);
+    // This creates/updates the slave contribution
+    CRM_Recurmaster_Slave::updateAllByMasterContribution($masterContributionDetails);
+  }
+  // This checks if any updates need to be made at the payment processor provider
   CRM_Recurmaster_Payment::checkSubscription($recurContributionParams);
+}
+
+/**
+ * @param $op
+ * @param $objectName
+ * @param $id
+ * @param $params
+ */
+function recurmaster_civicrm_pre($op, $objectName, $id, &$params) {
+  switch ($objectName) {
+    case 'ContributionRecur':
+      if (($op !== 'create') && ($op !== 'edit')) {
+        return;
+      }
+      if ($op === 'create') {
+        if (!CRM_Recurmaster_Master::isMasterRecurByPaymentProcessorId($params['payment_processor_id'])) {
+          return;
+        }
+      }
+      if ($op === 'edit') {
+        if (!CRM_Recurmaster_Master::isMasterRecurByRecurId($id)) {
+          return;
+        }
+      }
+
+      // This is a master recur, force the frequency to be fixed
+      // Update frequency as we use a fixed frequency for master
+      Civi::$statics['recurmaster']['slave']['frequency_unit'] = $params['frequency_unit'];
+      Civi::$statics['recurmaster']['slave']['frequency_interval'] = $params['frequency_interval'];
+      $params['frequency_unit'] = 'month';
+      $params['frequency_interval'] = '1';
+  }
 }
 
 /**
@@ -259,13 +315,15 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
         return;
       }
       $contributionDetails = json_decode(json_encode($objectRef), TRUE);
-      if (CRM_Recurmaster_Master::isMasterRecur($contributionDetails['contribution_recur_id'])) {
+      if (CRM_Recurmaster_Master::isMasterRecurByRecurId($contributionDetails['contribution_recur_id'])) {
         if ($op === 'create') {
           // Add a callback to update the master contribution once we've finished here
           CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT,
             'recurmaster_callback_civicrm_post', array(array('entity' => $objectName, 'op' => $op, 'id' => $contributionDetails['id'])));
         }
-        CRM_Recurmaster_Slave::updateAllByMasterContribution($contributionDetails);
+        if (!empty($contributionDetails['id'])) {
+          Civi::$statics['recurmaster']['master']['contribution_id'] = $contributionDetails['id'];
+        }
       }
       break;
 
@@ -274,7 +332,7 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
         return;
       }
       $contributionRecurDetails = json_decode(json_encode($objectRef), TRUE);
-      if (!CRM_Recurmaster_Master::isMasterRecur($contributionRecurDetails['id'])) {
+      if (!CRM_Recurmaster_Master::isMasterRecurByRecurId($contributionRecurDetails['id'])) {
         return;
       }
 
@@ -316,7 +374,10 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
         return;
       }
       $contributionRecurDetails['payment_processor_id'] = $slaveProcessor['id'];
-      civicrm_api3('ContributionRecur', 'create', $contributionRecurDetails);
+      $contributionRecurDetails['frequency_unit'] = Civi::$statics['recurmaster']['slave']['frequency_unit'];
+      $contributionRecurDetails['frequency_interval'] = Civi::$statics['recurmaster']['slave']['frequency_interval'];
+      $recurResult = civicrm_api3('ContributionRecur', 'create', $contributionRecurDetails);
+      Civi::$statics['recurmaster']['slave']['id'] = $recurResult['id'];
 
       break;
   }
@@ -333,12 +394,6 @@ function recurmaster_callback_civicrm_post($params) {
   switch ($params['entity']) {
     case 'ContributionRecur':
       if ($params['op'] == 'create') {
-        // Update the master recur financial type to the configured type
-        $masterContributionRecurParams = array(
-          'id' => $params['id'],
-          'financial_type_id' => CRM_Recurmaster_Settings::getValue('master_financial_type'),
-        );
-        civicrm_api3('ContributionRecur', 'create', $masterContributionRecurParams);
       }
       elseif ($params['op'] == 'edit') {
         // Calculate the master amount.  If it has changed, update the recur
@@ -354,7 +409,8 @@ function recurmaster_callback_civicrm_post($params) {
         'id' => $params['id'],
         'financial_type_id' => CRM_Recurmaster_Settings::getValue('master_financial_type'),
       );
-      civicrm_api3('Contribution', 'create', $masterContributionParams);
+      $contributionResult = civicrm_api3('Contribution', 'create', $masterContributionParams);
+      Civi::$statics['recurmaster']['master']['contribution_id'] = $contributionResult['id'];
       break;
   }
 }
@@ -370,7 +426,7 @@ function recurmaster_civicrm_buildForm($formName, &$form) {
     if (empty($recurId)) {
       return;
     }
-    if (CRM_Recurmaster_Master::isMasterRecur($recurId)) {
+    if (CRM_Recurmaster_Master::isMasterRecurByRecurId($recurId)) {
       // Ok, this is a master recur.  Freeze some fields that should not be modified
       $form->getElement('amount')->freeze();
       $form->getElement('installments')->freeze();

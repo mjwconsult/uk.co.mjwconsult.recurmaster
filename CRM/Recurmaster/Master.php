@@ -63,8 +63,8 @@ class CRM_Recurmaster_Master {
           $msgTitle = ts('Update Error');
           $msgType = 'error';
         }
+        $recurs = CRM_Utils_Array::value('values', $recurResult);
       }
-      $recurs = CRM_Utils_Array::value('values', $recurResult);
     }
     return $recurs;
   }
@@ -112,8 +112,8 @@ class CRM_Recurmaster_Master {
     // We don't care about the time, only the date:
     $linkedDate = new DateTime($lDetail['next_sched_contribution_date']);
     $masterDate = new DateTime($mDetail['next_sched_contribution_date']);
-    $linkedDate->setTime(0,0,0,0);
-    $masterDate->setTime(0,0,0,0);
+    $linkedDate->setTime(0,0,0);
+    $masterDate->setTime(0,0,0);
     // Do the next scheduled contribution dates match for linked and master?
     if ($linkedDate == $masterDate) {
       return TRUE;
@@ -263,7 +263,7 @@ class CRM_Recurmaster_Master {
    * @return bool
    * @throws \CiviCRM_API3_Exception
    */
-  public static function isMasterRecur($recurId) {
+  public static function isMasterRecurByRecurId($recurId) {
     // Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
     $paymentProcessorTypes = (string) CRM_Recurmaster_Settings::getValue('paymentprocessortypes');
     if (empty($paymentProcessorTypes)) {
@@ -291,6 +291,33 @@ class CRM_Recurmaster_Master {
   }
 
   /**
+   * Is this recurring contribution a master?
+   * Yes, if it is one of the payment processor types listed in settings
+   *
+   * @param $paymentProcessorId
+   *
+   * @return bool
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function isMasterRecurByPaymentProcessorId($paymentProcessorId) {
+    // Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
+    $paymentProcessorTypes = (string) CRM_Recurmaster_Settings::getValue('paymentprocessortypes');
+    if (empty($paymentProcessorTypes)) {
+      return FALSE;
+    }
+    $paymentProcessorTypes = explode(',', $paymentProcessorTypes);
+    $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', array(
+      'return' => array("id"),
+      'payment_processor_type_id' => array('IN' => $paymentProcessorTypes),
+    ));
+
+    if (array_key_exists($paymentProcessorId, $paymentProcessors['values'])) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
+  /**
    * Get recurring contributions by contact Id where payment processor is in list of master recurring contributions
    *
    * @param null $contactId
@@ -299,8 +326,13 @@ class CRM_Recurmaster_Master {
    * @throws \CiviCRM_API3_Exception
    */
   private static function getMasterRecurringContributionsbyContact($contactId = NULL) {
-    $paymentProcessorTypes = explode(',', CRM_Recurmaster_Settings::getValue('paymentprocessortypes'));
-    $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', array(
+    $paymentProcessorTypes = CRM_Recurmaster_Settings::getValue('paymentprocessortypes');
+    if (empty($paymentProcessorTypes)) {
+      Civi::log()->warning('Recurmaster - no master payment processors - is recurmaster configured?');
+      return [];
+    }
+    $paymentProcessorTypes = explode(',', $paymentProcessorTypes);
+      $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', array(
       'return' => array("id"),
       'payment_processor_type_id' => array('IN' => $paymentProcessorTypes),
     ));

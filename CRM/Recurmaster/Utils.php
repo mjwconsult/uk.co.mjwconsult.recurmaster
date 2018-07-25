@@ -56,4 +56,21 @@ class CRM_Recurmaster_Utils {
     }
   }
 
+  /**
+   * Return true if date1 < date2
+   *
+   * @param $date1
+   * @param $date2
+   *
+   * @return bool
+   */
+  public static function dateLessThan($date1, $date2) {
+    $date1DT = new DateTime($date1);
+    $date2DT = new DateTime($date2);
+    if ($date1DT < $date2DT) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
 }

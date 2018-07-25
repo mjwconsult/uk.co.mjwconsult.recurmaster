@@ -27,7 +27,6 @@ class CRM_Recurmaster_Slave {
    * - contribution date matches slaveRecur next_sched_contribution_date
    *
    * We then update the contribution
-   * TODO: When do we trigger a recalculation of recur dates? Not here as it will get called multiple times
    *
    * @param $masterRecurId
    * @param $slaveRecurDetails
@@ -38,7 +37,8 @@ class CRM_Recurmaster_Slave {
     CRM_Recurmaster_Utils::log(__FUNCTION__ . ' updating recur ' . $slaveRecurDetails['id'], TRUE);
 
     $masterContributionDT = new DateTime($masterContributionDetails['receive_date']);
-    $slaveRecurNextScheduledDT = new DateTime($slaveRecurDetails['next_sched_contribution_date']);
+    // If slave next_sched_contribution_date is not set then it's new and we haven't processed it yet.
+    $slaveRecurNextScheduledDT = new DateTime(CRM_Utils_Array::value('next_sched_contribution_date', $slaveRecurDetails, $masterContributionDetails['receive_date']));
 
     if ($masterContributionDT->format('Ymd') !== $slaveRecurNextScheduledDT->format('Ymd')) {
       CRM_Recurmaster_Utils::log(__FUNCTION__ . ' Master contribution date does not match slave next scheduled date SR=' . $slaveRecurDetails['id'], TRUE);
@@ -69,11 +69,15 @@ class CRM_Recurmaster_Slave {
       $slaveContributionParams[$key] = $masterContributionDetails[$key];
     }
     $slaveContributionParams['contribution_recur_id'] = $slaveRecurDetails['id'];
-    $slaveContributionParams['contribution_source'] = $slaveRecurDetails[CRM_Recurmaster_Utils::getCustomByName('description')];
-    // If we don't have a description for the slave recur, copy it from the master contribution.
-    if (empty($slaveContributionParams['contribution_source']) && !empty($masterContributionDetails['source'])) {
-      $slaveRecurDetails[CRM_Recurmaster_Utils::getCustomByName('description')] = $masterContributionDetails['source'];
-      civicrm_api3('ContributionRecur', 'create', $slaveRecurDetails);
+    // If we don't have a description for the slave contribution, get it from the description field on the slave recur.
+    // If that is empty too, copy it from the master contribution.
+    if (empty($slaveContributionParams['contribution_source'])) {
+      if (empty($slaveRecurDetails[CRM_Recurmaster_Utils::getCustomByName('description')])
+        && (!empty($masterContributionDetails['contribution_source']))) {
+        $slaveRecurDetails[CRM_Recurmaster_Utils::getCustomByName('description')] = $masterContributionDetails['contribution_source'];
+        civicrm_api3('ContributionRecur', 'create', $slaveRecurDetails);
+      }
+      $slaveContributionParams['contribution_source'] = $slaveRecurDetails[CRM_Recurmaster_Utils::getCustomByName('description')];
     }
     $slaveContributionParams['total_amount'] = $slaveRecurDetails['amount'];
     // We always inherit the financial type from the recur
