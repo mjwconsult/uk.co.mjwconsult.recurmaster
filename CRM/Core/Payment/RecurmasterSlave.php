@@ -76,7 +76,7 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @return bool
    */
   protected function supportsFutureRecurStartDate() {
-    return FALSE;
+    return TRUE;
   }
 
   /**
@@ -118,6 +118,19 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
     $recurRecord['contributionRecurID'] = $recurRecord['id'];
 
     $params = array_merge($recurRecord, $params);
+
+    $contributionDetails = civicrm_api3('Contribution', 'get', ['contribution_recur_id' => $recurRecord['id']]);
+    if ($contributionDetails['count'] == 1) {
+      // Got one contribution, check if we should update the start date.
+      $contribution = CRM_Utils_Array::first($contributionDetails['values']);
+      if (!CRM_Recurmaster_Utils::dateEquals($contribution['receive_date'], $params['start_date'])) {
+        $contributionParams = [
+          'id' => $contribution['id'],
+          'receive_date' => $params['start_date'],
+        ];
+        civicrm_api3('Contribution', 'create', $contributionParams);
+      }
+    }
 
     return self::setRecurTransactionId($params);
   }

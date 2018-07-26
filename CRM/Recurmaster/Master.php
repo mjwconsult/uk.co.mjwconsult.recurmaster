@@ -51,6 +51,18 @@ class CRM_Recurmaster_Master {
       if ($contributionRecur != $originalContributionRecur) {
         Civi::log()->debug('CRM_Recurmaster_Master::update: Calculated amount for R' . $contributionRecur['id'] . ' is ' . $contributionRecur['amount']);
         $recurResult = civicrm_api3('ContributionRecur', 'create', $contributionRecur);
+        $contributionParams = [
+          'contribution_recur_id' => $contributionRecur['id'],
+          'receive_date' => $contributionRecur['next_sched_contribution_date'],
+        ];
+        $contributionResult = civicrm_api3('Contribution', 'get', $contributionParams);
+        if ($contributionResult['count'] == 1) {
+          $contribution = CRM_Utils_Array::first($contributionResult['values']);
+          if ($contribution['total_amount'] != $contributionRecur['amount']) {
+            $contribution['total_amount'] = $contributionRecur['amount'];
+            civicrm_api3('Contribution', 'create', $contribution);
+          }
+        }
 
         $paymentProcessor = Civi\Payment\System::singleton()->getById($contributionRecur['payment_processor_id']);
         if ($paymentProcessor->supports('EditRecurringContribution')) {
@@ -109,13 +121,8 @@ class CRM_Recurmaster_Master {
       return FALSE;
     }
 
-    // We don't care about the time, only the date:
-    $linkedDate = new DateTime($lDetail['next_sched_contribution_date']);
-    $masterDate = new DateTime($mDetail['next_sched_contribution_date']);
-    $linkedDate->setTime(0,0,0);
-    $masterDate->setTime(0,0,0);
     // Do the next scheduled contribution dates match for linked and master?
-    if ($linkedDate == $masterDate) {
+    if (CRM_Recurmaster_Utils::dateEquals($lDetail['next_sched_contribution_date'], $mDetail['next_sched_contribution_date'])) {
       return TRUE;
     }
 
@@ -216,18 +223,30 @@ class CRM_Recurmaster_Master {
   }
 
   /**
-   * Updates the next_sched_contribution_date for a recurring contribution via API
-   * @param $recur
+   * Updates the next_sched_contribution_date for a slave recurring contribution via API
+   *
+   * @param $slaveRecur
    * @param $nextScheduledDateString
    *
    * @return mixed
    * @throws \CiviCRM_API3_Exception
    */
-  private static function updateNextScheduledDate($recur, $nextScheduledDateString) {
-    $recur['next_sched_contribution_date'] = $nextScheduledDateString;
+  private static function updateNextScheduledDate($slaveRecur, $nextScheduledDateString) {
+    $originalRecur = $slaveRecur;
+    if (CRM_Recurmaster_Utils::dateLessThan($nextScheduledDateString, $slaveRecur['start_date'])) {
+      // slave hasn't started yet
+      $slaveRecur['next_sched_contribution_date'] = $slaveRecur['start_date'];
+    }
+    else {
+      // slave recur has started
+      $slaveRecur['next_sched_contribution_date'] = $nextScheduledDateString;
+    }
+
     // Set the next scheduled date
-    civicrm_api3('ContributionRecur', 'create', $recur);
-    return $recur;
+    if ($originalRecur !== $slaveRecur) {
+      civicrm_api3('ContributionRecur', 'create', $slaveRecur);
+    }
+    return $slaveRecur;
   }
 
   /** Get the date of the last payment for the linked recurring contribution

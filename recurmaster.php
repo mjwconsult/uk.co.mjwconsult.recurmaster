@@ -430,11 +430,17 @@ function recurmaster_civicrm_buildForm($formName, &$form) {
       // Ok, this is a master recur.  Freeze some fields that should not be modified
       $form->getElement('amount')->freeze();
       $form->getElement('installments')->freeze();
-      $form->removeElement('start_date');
+      $form->getElement('start_date')->freeze();
     }
     elseif(CRM_Recurmaster_Slave::isSlaveRecur($recurId)) {
       // This is a slave recur.
-      $form->removeElement('start_date');
+      $form->add('datepicker', 'start_date', ts('Start Date'), array(), FALSE, array('time' => FALSE));
+      $recur = new CRM_Contribute_BAO_ContributionRecur();
+      $recur->id = $recurId;
+      $recur->find(TRUE);
+      $startDate = $recur->start_date;
+      $defaults['start_date'] = $startDate;
+      $form->setDefaults($defaults);
     }
 
   }

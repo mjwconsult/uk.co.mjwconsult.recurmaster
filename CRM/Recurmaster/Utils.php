@@ -73,4 +73,27 @@ class CRM_Recurmaster_Utils {
     return FALSE;
   }
 
+  /**
+   * Return true if date1 == date2. If $time=FALSE, ignore time difference
+   *
+   * @param $date1
+   * @param $date2
+   * @param bool $time
+   *
+   * @return bool
+   */
+  public static function dateEquals($date1, $date2, $time = FALSE) {
+    $date1DT = new DateTime($date1);
+    $date2DT = new DateTime($date2);
+    if (!$time) {
+      $date1DT->setTime(0, 0, 0);
+      $date2DT->setTime(0, 0, 0);
+    }
+
+    if ($date1DT == $date2DT) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
 }
