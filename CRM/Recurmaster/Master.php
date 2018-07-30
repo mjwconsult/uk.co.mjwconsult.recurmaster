@@ -93,6 +93,7 @@ class CRM_Recurmaster_Master {
     $contributionRecurParams = array(
       CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE) => $masterId,
       'options' => array('limit' => 0),
+      'contribution_status_id' => ['NOT IN' => ["Cancelled"]],
     );
 
     $contributionRecurs = civicrm_api3('ContributionRecur', 'get', $contributionRecurParams);
