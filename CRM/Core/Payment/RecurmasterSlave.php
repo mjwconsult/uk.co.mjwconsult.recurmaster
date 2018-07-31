@@ -256,7 +256,7 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
       'master_recur' => array(
         'htmlType' => 'select',
         'name' => 'master_recur',
-        'title' => ts('Add to existing payment'),
+        'title' => ts('Add to existing Direct Debit'),
         'cc_field' => TRUE,
         'attributes' => $masterRecurs,
         // eg. array('1' => '1st', '8' => '8th', '21' => '21st'),
