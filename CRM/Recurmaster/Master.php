@@ -417,11 +417,9 @@ class CRM_Recurmaster_Master {
       }
       $contributionStatus = CRM_Core_PseudoConstant::getLabel('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contributionRecur['contribution_status_id']);
       // Create display name for recurring contribution
-      $cRecur[$contributionRecur['id']] = $paymentProcessorName . '/'
-        . $contributionStatus . '/'
-        . CRM_Utils_Money::format($contributionRecur['amount'],$contributionRecur['currency'])
-        . '/every ' . $contributionRecur['frequency_interval'] . ' ' . $contributionRecur['frequency_unit']
-        . '/' . CRM_Utils_Array::value('trxn_id', $contributionRecur);
+      $cRecur[$contributionRecur['id']] = CRM_Utils_Money::format($contributionRecur['amount'],$contributionRecur['currency'])
+        . ', every ' . $contributionRecur['frequency_interval'] . ' ' . $contributionRecur['frequency_unit']
+        . ' (' . $contributionStatus . ' / ' . CRM_Utils_Array::value('trxn_id', $contributionRecur). ')';
     }
     if ($recurId) {
       return reset($cRecur);
