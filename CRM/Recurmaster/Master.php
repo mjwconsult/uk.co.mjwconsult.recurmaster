@@ -90,6 +90,8 @@ class CRM_Recurmaster_Master {
    * @throws \CiviCRM_API3_Exception
    */
   public static function getLinkedRecurring($masterId) {
+    // Parameters for slave recurring contributions
+    // Note: We exclude cancelled slave recurring contributions.
     $contributionRecurParams = array(
       CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE) => $masterId,
       'options' => array('limit' => 0),
