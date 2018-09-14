@@ -1,6 +1,6 @@
 {*
  +--------------------------------------------------------------------+
- | CiviCRM version 4.7                                                |
+ | CiviCRM version 5                                                  |
  +--------------------------------------------------------------------+
  | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
@@ -28,9 +28,17 @@
 
 {if $action eq 4} {* when action is view *}
     {if $recur}
-        <h3>{ts}View Recurring Payment{/ts}</h3>
+        {if $recur.is_test}
+        <div class="help">
+          <strong>{ts}This is a TEST transaction{/ts}</strong>
+        </div>
+        {/if}
         <div class="crm-block crm-content-block crm-recurcontrib-view-block">
           <table class="crm-info-panel">
+            <tr>
+              <td class="label">{ts}From{/ts}</td>
+              <td class="bold"><a href="{crmURL p='civicrm/contact/view' q="cid=`$recur.contact_id`"}">{$displayName}</a></td>
+            </tr>
             <tr><td class="label">{ts}Amount{/ts}</td><td>{$recur.amount|crmMoney:$recur.currency}{if $is_test} ({ts}test{/ts}){/if}</td></tr>
             <tr><td class="label">{ts}Frequency{/ts}</td><td>every {$recur.frequency_interval} {$recur.frequency_unit}</td></tr>
             <tr><td class="label">{ts}Installments{/ts}</td><td>{$recur.installments}</td></tr>
@@ -62,6 +70,31 @@
           <div class="crm-submit-buttons"><a class="button cancel crm-form-submit" href="{crmURL p='civicrm/contact/view' q='action=browse&selectedChild=contribute'}">{ts}Done{/ts}</a></div>
         </div>
     {/if}
+
+  <script type="text/javascript">
+    var recurContribID = {$recur.id};
+    var contactID = {$contactId};
+    {literal}
+    CRM.$(function($) {
+      CRM.loadPage(
+        CRM.url(
+          'civicrm/contribute/contributionrecur-payments',
+          {
+            reset: 1,
+            id: recurContribID,
+            cid: contactID
+          },
+          'back'
+        ),
+        {
+          target : '#recurring-contribution-payments',
+          dialog : false
+        }
+      );
+    });
+    {/literal}
+  </script>
+  <div id="recurring-contribution-payments"></div>
 {/if}
 {if $recurRows}
     {strip}
