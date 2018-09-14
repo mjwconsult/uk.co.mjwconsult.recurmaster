@@ -431,6 +431,8 @@ function recurmaster_civicrm_buildForm($formName, &$form) {
       $form->getElement('amount')->freeze();
       $form->getElement('installments')->freeze();
       $form->getElement('start_date')->freeze();
+      $form->getElement('frequency_interval')->freeze();
+      $form->getElement('frequency_unit')->freeze();
     }
     elseif(CRM_Recurmaster_Slave::isSlaveRecur($recurId)) {
       // This is a slave recur.
