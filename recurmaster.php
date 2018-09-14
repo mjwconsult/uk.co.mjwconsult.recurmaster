@@ -258,6 +258,9 @@ function recurmaster_civicrm_smartdebit_updateRecurringContribution(&$recurContr
       $slaveRecurParams['start_date'] = $recurContributionParams['start_date'];
       civicrm_api3('ContributionRecur', 'create', $slaveRecurParams);
     }
+    if (empty(Civi::$statics['recurmaster']['master']['contribution_id'])) {
+      return;
+    }
     $masterContributionDetails = civicrm_api3('Contribution', 'getsingle', ['id' => Civi::$statics['recurmaster']['master']['contribution_id']]);
     // This creates/updates the slave contribution
     CRM_Recurmaster_Slave::updateAllByMasterContribution($masterContributionDetails);
