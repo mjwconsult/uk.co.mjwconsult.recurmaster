@@ -90,9 +90,12 @@ class CRM_Recurmaster_Master {
    * @throws \CiviCRM_API3_Exception
    */
   public static function getLinkedRecurring($masterId) {
+    // Parameters for slave recurring contributions
+    // Note: We exclude cancelled slave recurring contributions.
     $contributionRecurParams = array(
       CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE) => $masterId,
       'options' => array('limit' => 0),
+      'contribution_status_id' => ['NOT IN' => ["Cancelled"]],
     );
 
     $contributionRecurs = civicrm_api3('ContributionRecur', 'get', $contributionRecurParams);
@@ -417,11 +420,9 @@ class CRM_Recurmaster_Master {
       }
       $contributionStatus = CRM_Core_PseudoConstant::getLabel('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contributionRecur['contribution_status_id']);
       // Create display name for recurring contribution
-      $cRecur[$contributionRecur['id']] = $paymentProcessorName . '/'
-        . $contributionStatus . '/'
-        . CRM_Utils_Money::format($contributionRecur['amount'],$contributionRecur['currency'])
-        . '/every ' . $contributionRecur['frequency_interval'] . ' ' . $contributionRecur['frequency_unit']
-        . '/' . CRM_Utils_Array::value('trxn_id', $contributionRecur);
+      $cRecur[$contributionRecur['id']] = CRM_Utils_Money::format($contributionRecur['amount'],$contributionRecur['currency'])
+        . ', every ' . $contributionRecur['frequency_interval'] . ' ' . $contributionRecur['frequency_unit']
+        . ' (' . $contributionStatus . ' / ' . CRM_Utils_Array::value('trxn_id', $contributionRecur). ')';
     }
     if ($recurId) {
       return reset($cRecur);
