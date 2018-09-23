@@ -103,6 +103,7 @@
             <th scope="col">{ts}Amount{/ts}</th>
             <th scope="col">{ts}Frequency{/ts}</th>
             <th scope="col">{ts}Start Date{/ts}</th>
+            <th scope="col">{ts}Next Date{/ts}</th>
             <th scope="col">{ts}Installments{/ts}</th>
             <th scope="col">{ts}Status{/ts}</th>
             <th scope="col">{ts}Processor{/ts}</th>
@@ -116,6 +117,7 @@
                 <td>{$row.amount|crmMoney:$row.currency}{if $row.is_test} ({ts}test{/ts}){/if}</td>
                 <td>{ts}Every{/ts} {$row.frequency_interval} {$row.frequency_unit} </td>
                 <td>{$row.start_date|crmDate}</td>
+                <td>{$row.next_sched_contribution_date|crmDate}</td>
                 <td>{$row.installments}</td>
                 <td>{$row.contribution_status}</td>
                 <td>{$row.payment_processor}</td>
