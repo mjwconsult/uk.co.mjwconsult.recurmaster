@@ -17,7 +17,7 @@ class CRM_Recurmaster_Slave {
       return;
     }
     foreach ($linkedRecurs as $linkedRecurDetails) {
-      self::update($masterContributionDetails, $linkedRecurDetails);
+      self::update($linkedRecurDetails, $masterContributionDetails);
     }
   }
 
@@ -27,14 +27,27 @@ class CRM_Recurmaster_Slave {
    * - contribution date matches slaveRecur next_sched_contribution_date
    *
    * We then update the contribution
-   *
-   * @param $masterRecurId
-   * @param $slaveRecurDetails
+   *99
+   * @param array $slaveRecurDetails ContributionRecur
+   * @param array $masterContributionDetails Contribution
    *
    * @throws \CiviCRM_API3_Exception
    */
-  public static function update($masterContributionDetails, $slaveRecurDetails) {
+  public static function update($slaveRecurDetails, $masterContributionDetails = NULL) {
     CRM_Recurmaster_Utils::log(__FUNCTION__ . ' updating recur ' . $slaveRecurDetails['id'], TRUE);
+
+    if (!$masterContributionDetails) {
+      $masterRecurId = $slaveRecurDetails[CRM_Recurmaster_Utils::getMasterRecurIdCustomField()];
+      if (empty($masterRecurId)) {
+        CRM_Recurmaster_Utils::log(__FUNCTION__ . ' No master recur ID', TRUE);
+        return;
+      }
+      $masterContributionParams = [
+        'contribution_recur_id' => $masterRecurId,
+        'options' => ['limit' => 1, 'sort' => "id DESC"],
+      ];
+      $masterContributionDetails = civicrm_api3('Contribution', 'getsingle', $masterContributionParams);
+    }
 
     $masterContributionDT = new DateTime($masterContributionDetails['receive_date']);
     // If slave next_sched_contribution_date is not set then it's new and we haven't processed it yet.

@@ -287,7 +287,10 @@ function recurmaster_civicrm_pre($op, $objectName, $id, &$params) {
         }
       }
       if ($op === 'edit') {
-        if (!CRM_Recurmaster_Master::isMasterRecurByRecurId($id)) {
+        if (CRM_Recurmaster_Slave::isSlaveRecur($id)) {
+          CRM_Recurmaster_Slave::update($params, NULL);
+        }
+        elseif (!CRM_Recurmaster_Master::isMasterRecurByRecurId($id)) {
           return;
         }
       }
