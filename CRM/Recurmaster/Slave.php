@@ -3,6 +3,30 @@
 class CRM_Recurmaster_Slave {
 
   /**
+   * Is this recurring contribution of type "Slave"?
+   * @param $recurId
+   *
+   * @return bool
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function isSlaveRecur($recurId) {
+    try {
+      $contributionRecur = civicrm_api3('ContributionRecur', 'getsingle', [
+        'id' => $recurId,
+      ]);
+    }
+    catch (Exception $e) {
+      return FALSE;
+    }
+
+    $paymentProcessor = \Civi\Payment\System::singleton()->getById($contributionRecur['payment_processor_id']);
+    if ($paymentProcessor->getPaymentProcessor()['class_name'] == 'Payment_RecurmasterSlave') {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
+  /**
    * Update all slave recurring contributions and contributions linked to the master
    * Create/Edit slave contributions as required to match the master
    * We assume that the master actually took the full amount
@@ -103,30 +127,6 @@ class CRM_Recurmaster_Slave {
     catch (Exception $e) {
       CRM_Recurmaster_Utils::log(__FUNCTION__ . ' Unable to create contribution for slave R=' . $slaveRecurDetails['id'], FALSE);
     }
-  }
-
-  /**
-   * Is this recurring contribution of type "Slave"?
-   * @param $recurId
-   *
-   * @return bool
-   * @throws \CiviCRM_API3_Exception
-   */
-  public static function isSlaveRecur($recurId) {
-    try {
-      $contributionRecur = civicrm_api3('ContributionRecur', 'getsingle', [
-        'id' => $recurId,
-      ]);
-    }
-    catch (Exception $e) {
-      return FALSE;
-    }
-
-    $paymentProcessor = \Civi\Payment\System::singleton()->getById($contributionRecur['payment_processor_id']);
-    if ($paymentProcessor->getPaymentProcessor()['class_name'] == 'Payment_RecurmasterSlave') {
-      return TRUE;
-    }
-    return FALSE;
   }
 
 }
