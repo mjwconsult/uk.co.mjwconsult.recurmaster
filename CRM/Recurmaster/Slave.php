@@ -46,6 +46,26 @@ class CRM_Recurmaster_Slave {
   }
 
   /**
+   * Cancel all slave subscriptions linked to the master when the master is cancelled.
+   *
+   * @param int $masterRecurId
+   *
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function cancelAllForMaster($masterRecurId) {
+    $linkedRecurs = CRM_Recurmaster_Master::getLinkedRecurring($masterRecurId);
+    if (!$linkedRecurs) {
+      return;
+    }
+    foreach ($linkedRecurs as $linkedRecurDetails) {
+      $paymentProcessor = \Civi\Payment\System::singleton()->getById($linkedRecurDetails['payment_processor_id']);
+      $message = '';
+      $paymentProcessor->cancelSubscription($message, []);
+      civicrm_api3('ContributionRecur', 'cancel', ['id' => $linkedRecurDetails['id']]);
+    }
+  }
+
+  /**
    * Create/update the contributions for the slave recurring contribution
    * Based on whether:
    * - contribution date matches slaveRecur next_sched_contribution_date

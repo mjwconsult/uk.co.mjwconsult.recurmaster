@@ -226,6 +226,11 @@ function recurmaster_civicrm_smartdebit_alterVariableDDIParams(&$recurParams, &$
       CRM_Recurmaster_Payment_Smartdebit::alterDefaultPaymentAmount($smartDebitParams, $nextAmount);
       CRM_Recurmaster_Utils::log(__FUNCTION__ . ': smartDebitParams: ' . print_r($smartDebitParams, TRUE), TRUE);
       break;
+
+    case 'cancel':
+      CRM_Recurmaster_Slave::cancelAllForMaster($recurParams['id']);
+      break;
+
   }
 }
 
@@ -395,6 +400,9 @@ function recurmaster_callback_civicrm_post($params) {
               'contribution_status_id' => $params['details']['contribution_status_id'],
               'source' => $params['details']['source'],
             ];
+            if (!empty(Civi::$statics['recurmaster']['master']['contribution_source'])) {
+              $slaveParams['source'] = Civi::$statics['recurmaster']['master']['contribution_source'];
+            }
             civicrm_api3('Contribution', 'create', $slaveParams);
           }
           break;
@@ -438,6 +446,10 @@ function recurmaster_callback_civicrm_post($params) {
           $params['details']['payment_processor_id'] = $slaveProcessor['id'];
           $params['details']['frequency_unit'] = Civi::$statics['recurmaster']['slave']['frequency_unit'];
           $params['details']['frequency_interval'] = Civi::$statics['recurmaster']['slave']['frequency_interval'];
+          if (!empty(Civi::$statics['recurmaster']['master']['contribution_source'])) {
+            $params['details'][CRM_Recurmaster_Utils::getCustomByName('description')]
+              = Civi::$statics['recurmaster']['master']['contribution_source'];
+          }
 
           CRM_Recurmaster_Slave::create($params['details']);
           break;

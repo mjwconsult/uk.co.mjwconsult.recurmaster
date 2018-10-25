@@ -157,12 +157,12 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
   /**
    * Cancel the Subscription
    *
+   * @param string $message
    * @param array $params
    *
    * @return bool
-   * @throws \Exception
    */
-  public function cancelSubscription($params = array()) {
+  public function cancelSubscription(&$message = '', $params = []) {
     return TRUE;
   }
 
