@@ -183,7 +183,7 @@ function recurmaster_civicrm_links($op, $objectName, $objectId, &$links, &$mask,
             return;
           }
 
-          if (empty($contributionRecur[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)])) {
+          if (empty($contributionRecur[CRM_Recurmaster_Utils::getMasterRecurIdCustomField()])) {
             $links[] = array(
               'name' => ts('Link to Master Recurring Contribution'),
               'title' => ts('Link to Master Recurring Contribution'),
@@ -249,10 +249,10 @@ function recurmaster_civicrm_smartdebit_updateRecurringContribution(&$recurContr
   $recurContributionParams['frequency_unit'] = 'month';
   $recurContributionParams['frequency_interval'] = '1';
 
-  if (!empty(Civi::$statics['recurmaster']['slave']['id'])) {
+  if (!empty(Civi::$statics['recurmaster']['slave']['recur_id'])) {
     // We have just created a linked slave recur for this master recur.
     // Update some params on the slave.
-    $slaveRecurParams = civicrm_api3('ContributionRecur', 'getsingle', ['id' => Civi::$statics['recurmaster']['slave']['id']]);
+    $slaveRecurParams = civicrm_api3('ContributionRecur', 'getsingle', ['id' => Civi::$statics['recurmaster']['slave']['recur_id']]);
 
     if (CRM_Recurmaster_Utils::dateLessThan($slaveRecurParams['start_date'], $recurContributionParams['start_date'])) {
       $slaveRecurParams['start_date'] = $recurContributionParams['start_date'];
@@ -306,6 +306,8 @@ function recurmaster_civicrm_pre($op, $objectName, $id, &$params) {
  * @param $objectName
  * @param $objectId
  * @param $objectRef
+ *
+ * @throws \CiviCRM_API3_Exception
  */
 function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
   switch ($objectName) {
@@ -317,15 +319,22 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
         return;
       }
       $contributionDetails = json_decode(json_encode($objectRef), TRUE);
-      if (CRM_Recurmaster_Master::isMasterRecurByRecurId($contributionDetails['contribution_recur_id'])) {
-        if ($op === 'create') {
-          // Add a callback to update the master contribution once we've finished here
-          CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT,
-            'recurmaster_callback_civicrm_post', array(array('entity' => $objectName, 'op' => $op, 'id' => $contributionDetails['id'])));
-        }
-        if (!empty($contributionDetails['id'])) {
-          Civi::$statics['recurmaster']['master']['contribution_id'] = $contributionDetails['id'];
-        }
+      if (!CRM_Recurmaster_Master::isMasterRecurByRecurId($contributionDetails['contribution_recur_id'])) {
+        return;
+      }
+
+      // Add a callback to update the master contribution once we've finished here
+      $callbackParams = [
+        'entity' => $objectName,
+        'op' => $op,
+        'id' => $contributionDetails['id'],
+        'details' => $contributionDetails,
+      ];
+      if (CRM_Core_Transaction::isActive()) {
+        CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT, 'recurmaster_callback_civicrm_post', [$callbackParams]);
+      }
+      else {
+        recurmaster_callback_civicrm_post($callbackParams);
       }
       break;
 
@@ -338,15 +347,12 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
         return;
       }
 
-      // Create a new slave recurring contribution to match the newly created master recur
-
-      // Add the master ID to the slave processor
-      $contributionRecurDetails[CRM_Recurmaster_Utils::getMasterRecurIdCustomField()] = $contributionRecurDetails['id'];
       // Add a callback to update the master recur once we've finished here
       $callbackParams = [
         'entity' => $objectName,
         'op' => $op,
         'id' => $contributionRecurDetails['id'],
+        'details' => $contributionRecurDetails,
       ];
       if (CRM_Core_Transaction::isActive()) {
         CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT, 'recurmaster_callback_civicrm_post', [$callbackParams]);
@@ -354,33 +360,6 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
       else {
         recurmaster_callback_civicrm_post($callbackParams);
       }
-
-      if ($op == 'edit') {
-        return;
-      }
-
-      // Remove fields we don't want to copy from master to slave
-      $fieldsToUnset = array('id', 'trxn_id', 'invoice_id');
-      foreach ($fieldsToUnset as $field) {
-        unset($contributionRecurDetails[$field]);
-      }
-      // Get the id of the first slave payment processor (we only support one).
-      try {
-        $slaveProcessor = civicrm_api3('PaymentProcessor', 'getsingle', array(
-          'payment_processor_type_id' => "recurmaster_slave",
-          'options' => array('limit' => 1, 'sort' => "id ASC"),
-        ));
-      }
-      catch (Exception $e) {
-        Civi::log()->error('You must create a slave payment processor to use master recurring payments');
-        return;
-      }
-      $contributionRecurDetails['payment_processor_id'] = $slaveProcessor['id'];
-      $contributionRecurDetails['frequency_unit'] = Civi::$statics['recurmaster']['slave']['frequency_unit'];
-      $contributionRecurDetails['frequency_interval'] = Civi::$statics['recurmaster']['slave']['frequency_interval'];
-      $recurResult = civicrm_api3('ContributionRecur', 'create', $contributionRecurDetails);
-      Civi::$statics['recurmaster']['slave']['id'] = $recurResult['id'];
-
       break;
   }
 }
@@ -394,25 +373,75 @@ function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
  */
 function recurmaster_callback_civicrm_post($params) {
   switch ($params['entity']) {
-    case 'ContributionRecur':
-      if ($params['op'] == 'create') {
-      }
-      elseif ($params['op'] == 'edit') {
-        // Calculate the master amount.  If it has changed, update the recur
-        civicrm_api3('Job', 'process_recurmaster', [
-          'recur_ids' => $params['id'],
-        ]);
+    case 'Contribution':
+      switch ($params['op']) {
+        case 'create':
+          // Update the master contribution financial type to the configured type
+          $masterContributionParams = array(
+            'id' => $params['id'],
+            'financial_type_id' => CRM_Recurmaster_Settings::getValue('master_financial_type'),
+          );
+          $contributionResult = civicrm_api3('Contribution', 'create', $masterContributionParams);
+          Civi::$statics['recurmaster']['master']['contribution_id'] = $contributionResult['id'];
+          Civi::$statics['recurmaster']['master']['contribution_source'] = $contributionResult['values'][$contributionResult['id']]['source'];
+          break;
+
+        case 'edit':
+          // Update the receive date for the initial slave contribution if we just created it
+          if (!empty(Civi::$statics['recurmaster']['slave']['contribution_id'])) {
+            $slaveParams = [
+              'id' => Civi::$statics['recurmaster']['slave']['contribution_id'],
+              'receive_date' => $params['details']['receive_date'],
+              'contribution_status_id' => $params['details']['contribution_status_id'],
+              'source' => $params['details']['source'],
+            ];
+            civicrm_api3('Contribution', 'create', $slaveParams);
+          }
+          break;
+
       }
       break;
 
-    case 'Contribution':
-      // Update the master contribution financial type to the configured type
-      $masterContributionParams = array(
-        'id' => $params['id'],
-        'financial_type_id' => CRM_Recurmaster_Settings::getValue('master_financial_type'),
-      );
-      $contributionResult = civicrm_api3('Contribution', 'create', $masterContributionParams);
-      Civi::$statics['recurmaster']['master']['contribution_id'] = $contributionResult['id'];
+    case 'ContributionRecur':
+      switch ($params['op']) {
+        case 'edit':
+          if (!empty(Civi::$statics['recurmaster']['slave']['recur_id'])) {
+            //$slaveRecurParams =
+            // TODO: Do we pull description from contribution and put in description field for master/slave
+          }
+          // Calculate the master amount.  If it has changed, update the recur
+          civicrm_api3('Job', 'process_recurmaster', [
+            'recur_ids' => $params['id'],
+          ]);
+          return;
+
+        case 'create':
+          // We need to create a slave recur/contribution
+          // Remove fields we don't want to copy from master to slave
+          $fieldsToUnset = array('id', 'trxn_id', 'invoice_id');
+          foreach ($fieldsToUnset as $field) {
+            unset($params['details'][$field]);
+          }
+          // Get the id of the first slave payment processor (we only support one).
+          try {
+            $slaveProcessor = civicrm_api3('PaymentProcessor', 'getsingle', array(
+              'payment_processor_type_id' => "recurmaster_slave",
+              'options' => array('limit' => 1, 'sort' => "id ASC"),
+            ));
+          } catch (Exception $e) {
+            Civi::log()->error('You must create a slave payment processor to use master recurring payments');
+            return;
+          }
+
+          // Add the master ID and other parameters to the slave
+          $params['details'][CRM_Recurmaster_Utils::getMasterRecurIdCustomField()] = $params['id'];
+          $params['details']['payment_processor_id'] = $slaveProcessor['id'];
+          $params['details']['frequency_unit'] = Civi::$statics['recurmaster']['slave']['frequency_unit'];
+          $params['details']['frequency_interval'] = Civi::$statics['recurmaster']['slave']['frequency_interval'];
+
+          CRM_Recurmaster_Slave::create($params['details']);
+          break;
+      }
       break;
   }
 }

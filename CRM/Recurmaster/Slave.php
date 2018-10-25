@@ -135,6 +135,7 @@ class CRM_Recurmaster_Slave {
    * @param array $slaveRecurDetails
    *
    * @return array $slaveRecurDetails
+   * @throws \CRM_Core_Exception
    * @throws \CiviCRM_API3_Exception
    */
   public static function setNextScheduledDate($slaveRecurDetails) {
@@ -157,6 +158,25 @@ class CRM_Recurmaster_Slave {
     unset($slaveRecurDetails['next_sched_contribution']);
 
     return $slaveRecurDetails;
+  }
+
+  /**
+   * Create the slave recur and contribution records (when created via a master)
+   * @param $recurParams
+   *
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function create($recurParams) {
+    $recurResult = civicrm_api3('ContributionRecur', 'create', $recurParams);
+    $contributionParams = $recurParams;
+    $contributionParams['total_amount'] = $contributionParams['amount'];
+    $contributionParams['receive_date'] = $contributionParams['start_date'];
+    $contributionParams['source'] = CRM_Utils_Array::value('description', $recurParams);
+    $contributionParams['contribution_recur_id'] = $recurResult['id'];
+
+    $contributionResult = civicrm_api3('Contribution', 'create', $contributionParams);
+    Civi::$statics['recurmaster']['slave']['recur_id'] = $recurResult['id'];
+    Civi::$statics['recurmaster']['slave']['contribution_id'] = $contributionResult['id'];
   }
 
 }

@@ -93,7 +93,7 @@ class CRM_Recurmaster_Master {
     // Parameters for slave recurring contributions
     // Note: We exclude cancelled slave recurring contributions.
     $contributionRecurParams = array(
-      CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE) => $masterId,
+      CRM_Recurmaster_Utils::getMasterRecurIdCustomField() => $masterId,
       'options' => array('limit' => 0),
       'contribution_status_id' => ['NOT IN' => ["Cancelled"]],
     );

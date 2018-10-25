@@ -51,9 +51,9 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
         $contributionRecurRecords = civicrm_api3('ContributionRecur', 'getsingle', array(
           'id' => $this->_crid,
           'contact_id' => $this->_cid,
-          'return' => array(CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)),
+          'return' => array(CRM_Recurmaster_Utils::getMasterRecurIdCustomField()),
         ));
-        $this->masterRecurId = $contributionRecurRecords[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)];
+        $this->masterRecurId = $contributionRecurRecords[CRM_Recurmaster_Utils::getMasterRecurIdCustomField()];
         $currentRecur = CRM_Recurmaster_Master::getContactMasterRecurringContributionList($this->_cid, $this->masterRecurId);
         $this->assign('currentRecur', $currentRecur);
         break;
@@ -95,11 +95,11 @@ class CRM_Recurmaster_Form_Link extends CRM_Core_Form {
     switch ($this->_action) {
       case CRM_Core_Action::ADD:
         $this->masterRecurId = CRM_Utils_Array::value('contribution_recur_id', $values);
-        $contributionRecurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)] = $this->masterRecurId;
+        $contributionRecurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField()] = $this->masterRecurId;
         break;
 
       case CRM_Core_Action::DELETE:
-        $contributionRecurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField(TRUE)] = '';
+        $contributionRecurParams[CRM_Recurmaster_Utils::getMasterRecurIdCustomField()] = '';
         break;
 
       default:
