@@ -282,25 +282,21 @@ function recurmaster_civicrm_pre($op, $objectName, $id, &$params) {
         return;
       }
       if ($op === 'create') {
-        if (!CRM_Recurmaster_Master::isMasterRecurByPaymentProcessorId($params['payment_processor_id'])) {
-          return;
+        if (CRM_Recurmaster_Master::isMasterRecurByPaymentProcessorId($params['payment_processor_id'])) {
+          $params = CRM_Recurmaster_Utils::validateHookParams($params);
+          $params = CRM_Recurmaster_Master::setMasterFrequency($params);
         }
       }
-      if ($op === 'edit') {
+      elseif ($op === 'edit') {
         if (CRM_Recurmaster_Slave::isSlaveRecur($id)) {
-          CRM_Recurmaster_Slave::update($params, NULL);
+          $params = CRM_Recurmaster_Utils::validateHookParams($params);
+          $params = CRM_Recurmaster_Slave::setNextScheduledDate($params);
         }
-        elseif (!CRM_Recurmaster_Master::isMasterRecurByRecurId($id)) {
-          return;
+        elseif (CRM_Recurmaster_Master::isMasterRecurByRecurId($id)) {
+          $params = CRM_Recurmaster_Utils::validateHookParams($params);
+          $params = CRM_Recurmaster_Master::setMasterFrequency($params);
         }
       }
-
-      // This is a master recur, force the frequency to be fixed
-      // Update frequency as we use a fixed frequency for master
-      Civi::$statics['recurmaster']['slave']['frequency_unit'] = $params['frequency_unit'];
-      Civi::$statics['recurmaster']['slave']['frequency_interval'] = $params['frequency_interval'];
-      $params['frequency_unit'] = 'month';
-      $params['frequency_interval'] = '1';
   }
 }
 

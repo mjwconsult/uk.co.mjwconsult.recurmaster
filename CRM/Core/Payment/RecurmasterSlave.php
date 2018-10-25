@@ -103,10 +103,7 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
     // We need to set contributionRecurID for setRecurTransactionId as that is passed when triggered via doDirectPayment()
     $params['contributionRecurID'] = $params['id'];
     try {
-      $recurRecord = civicrm_api3('ContributionRecur', 'getsingle', array(
-        'id' => $params['id'],
-        'options' => array('limit' => 1),
-      ));
+      $recurRecord = civicrm_api3('ContributionRecur', 'getsingle', ['id' => $params['id']]);
     }
     catch (CiviCRM_API3_Exception $e) {
       CRM_Core_Error::statusBounce('No recurring record! ' . $e->getMessage());

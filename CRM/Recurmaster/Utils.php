@@ -57,16 +57,16 @@ class CRM_Recurmaster_Utils {
   }
 
   /**
-   * Return true if date1 < date2
+   * Return true if dateOlder < dateNewer
    *
-   * @param $date1
-   * @param $date2
+   * @param $dateOlder
+   * @param $dateNewer
    *
    * @return bool
    */
-  public static function dateLessThan($date1, $date2) {
-    $date1DT = new DateTime($date1);
-    $date2DT = new DateTime($date2);
+  public static function dateLessThan($dateOlder, $dateNewer) {
+    $date1DT = new DateTime($dateOlder);
+    $date2DT = new DateTime($dateNewer);
     if ($date1DT < $date2DT) {
       return TRUE;
     }
@@ -96,4 +96,23 @@ class CRM_Recurmaster_Utils {
     return FALSE;
   }
 
+  /**
+   * Validate parameters passed in by hooks, as they can vary especially with custom fields
+   *
+   * @param $params
+   *
+   * @return mixed
+   */
+  public static function validateHookParams($params) {
+    foreach ($params as $key => $value) {
+      // Custom fields may be named custom_X_X if loaded straight from form
+      if (substr($key, 0, 7) === 'custom_') {
+        $customParts = explode('_', $key);
+        if (count($customParts) > 1) {
+          $params[$customParts[0] . '_' . $customParts[1]] = $value;
+        }
+      }
+    }
+    return $params;
+  }
 }

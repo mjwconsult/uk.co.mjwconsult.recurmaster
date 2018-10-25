@@ -430,4 +430,45 @@ class CRM_Recurmaster_Master {
     return $cRecur;
   }
 
+  /**
+   * Set the Master recur frequency (to 1 month)
+   *
+   * @param array $params (ContributionRecur)
+   *
+   * @return array
+   */
+  public static function setMasterFrequency($params) {
+    // Only set frequency if it's specified in params as this is called on every recur pre-hook.
+    if (empty($params['frequency_unit']) || empty($params['frequency_interval'])) {
+      return $params;
+    }
+    // This is a master recur, force the frequency to be fixed
+    // Update frequency as we use a fixed frequency for master
+    Civi::$statics['recurmaster']['slave']['frequency_unit'] = $params['frequency_unit'];
+    Civi::$statics['recurmaster']['slave']['frequency_interval'] = $params['frequency_interval'];
+    $params['frequency_unit'] = 'month';
+    $params['frequency_interval'] = '1';
+    // We want the master to always take payment on the next available date, even if the amount would be 0.
+    $newStartDate = CRM_Recurmaster_Payment::getNextCollectionDate($params);
+    if (!empty($newStartDate) && CRM_Recurmaster_Utils::dateLessThan($newStartDate, $params['start_date'])) {
+      $params['start_date'] = $newStartDate;
+    }
+    return $params;
+  }
+
+  public static function getNextAvailableContributionDate($masterRecurId, $slaveRecurDetails) {
+    if (empty($slaveRecurDetails['start_date'])) {
+      throw new CRM_Core_Exception('Missing required parameter start date');
+    }
+    // If we have no scheduled date, set it to start_date
+    if (empty($slaveRecurDetails['next_sched_contribution_date'])) {
+      $slaveRecurDetails['next_sched_contribution_date'] = $slaveRecurDetails['start_date'];
+    }
+
+    /* The Master recur may be set to start a few months into the future
+     *
+     */
+
+  }
+
 }

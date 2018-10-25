@@ -129,4 +129,34 @@ class CRM_Recurmaster_Slave {
     }
   }
 
+  /**
+   * Set the next scheduled date for the slave, based on when we want to take payment and what the master can do
+   *
+   * @param array $slaveRecurDetails
+   *
+   * @return array $slaveRecurDetails
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function setNextScheduledDate($slaveRecurDetails) {
+    /**
+     * Get the details of the slave recur
+     * Get the details of the master recur
+     * If this is a new slave recur (next_sched_contribution_date < master next_sched_contribution_date)
+     *   we need to update the date of the master to the earliest possible
+     */
+    $masterRecurId = CRM_Utils_Array::value(CRM_Recurmaster_Utils::getMasterRecurIdCustomField(), $slaveRecurDetails);
+    if (empty($masterRecurId)) {
+      return $slaveRecurDetails;
+    }
+
+    $slaveRecurDetails['next_sched_contribution_date'] = CRM_Recurmaster_Master::getNextAvailableContributionDate($masterRecurId, $slaveRecurDetails);
+
+    // Set slave next scheduled date = master next scheduled date
+    $masterRecurDetails = civicrm_api3('ContributionRecur', 'getsingle', ['id' => $masterRecurId]);
+    $slaveRecurDetails['next_sched_contribution_date'] = $masterRecurDetails['next_sched_contribution_date'];
+    unset($slaveRecurDetails['next_sched_contribution']);
+
+    return $slaveRecurDetails;
+  }
+
 }

@@ -113,4 +113,17 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
     }
     CRM_Core_Payment_Smartdebit::changeSubscription($paymentProcessorObj->getPaymentProcessor(), $recurContributionParams, $startDate);
   }
+
+  /**
+   * This function gets the next possible collection date
+   *
+   * @param array $recurContributionParams
+   *
+   * @return string Date formatted as Y-m-d (eg. 2018-10-20)
+   * @throws \Exception
+   */
+  public static function getNextCollectionDate($recurContributionParams) {
+    $collectionDateTime = CRM_Smartdebit_DateUtils::getNextAvailableCollectionDate();
+    return $collectionDateTime->format('Y-m-d');
+  }
 }
