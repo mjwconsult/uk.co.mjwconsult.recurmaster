@@ -316,6 +316,23 @@ function recurmaster_civicrm_pre($op, $objectName, $id, &$params) {
  */
 function recurmaster_civicrm_post($op, $objectName, $objectId, &$objectRef) {
   switch ($objectName) {
+    case 'Membership':
+      if ($op !== 'create') {
+        return;
+      }
+      // Change membership record to be linked to slave recur instead of master
+      $slaveRecurId = Civi::$statics['recurmaster']['slave']['recur_id'];
+      //$masterRecurId = Civi::$statics['recurmaster']['master']['recur_id'];
+      $membershipId = $objectId;
+      if (empty($slaveRecurId)) {
+        return;
+      }
+      civicrm_api3('Membership', 'create', array(
+        'id' => $membershipId,
+        'contribution_recur_id' => $slaveRecurId,
+      ));
+      break;
+
     case 'Contribution':
       if (empty($objectRef->contribution_recur_id)) {
         return;
@@ -425,6 +442,7 @@ function recurmaster_callback_civicrm_post($params) {
 
         case 'create':
           // We need to create a slave recur/contribution
+          Civi::$statics['recurmaster']['master']['recur_id'] = $params['id'];
           // Remove fields we don't want to copy from master to slave
           $fieldsToUnset = array('id', 'trxn_id', 'invoice_id');
           foreach ($fieldsToUnset as $field) {
