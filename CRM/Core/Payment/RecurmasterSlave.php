@@ -12,15 +12,6 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
   protected $_params = array();
 
   /**
-   * We only need one instance of this object. So we use the singleton
-   * pattern and cache the instance in this variable
-   *
-   * @var object
-   * @static
-   */
-  static private $_singleton = NULL;
-
-  /**
    * Constructor
    *
    * @param string $mode the mode of operation: live or test
@@ -31,23 +22,6 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
     $this->_mode = $mode;
     $this->_paymentProcessor = $paymentProcessor;
     $this->_processorName = ts('Master Recurring Slave processor');
-  }
-
-  /**
-   * singleton function used to manage this object
-   *
-   * @param string $mode the mode of operation: live or test
-   *
-   * @return object
-   * @static
-   *
-   */
-  static function &singleton($mode, &$paymentProcessor, &$paymentForm = NULL, $force = FALSE) {
-    $processorName = $paymentProcessor['name'];
-    if (CRM_Utils_Array::value($processorName, self::$_singleton) === NULL) {
-      self::$_singleton[$processorName] = new CRM_Core_Payment_RecurOffline($mode, $paymentProcessor);
-    }
-    return self::$_singleton[$processorName];
   }
 
   /**
@@ -80,15 +54,26 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
   }
 
   /**
-   * @param  array $params assoc array of input parameters for this transaction
+   * Process payment
    *
-   * @return array the result in a nice formatted array (or an error object)
+   * Payment processors should set payment_status_id and trxn_id (if available).
+   *
+   * @param array $params
+   *   Assoc array of input parameters for this transaction.
+   *
+   * @param string $component
+   *
+   * @return array
+   *   Result array
+   *
    * @throws \CiviCRM_API3_Exception
    */
-  public function doDirectPayment(&$params) {
+  public function doPayment(&$params, $component = 'contribute') {
     self::setRecurTransactionId($params);
     return $params;
   }
+
+
 
   /**
    * Change the subscription amount
