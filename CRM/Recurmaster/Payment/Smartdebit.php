@@ -99,6 +99,7 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
       Civi::log()->error(__FUNCTION__ . ' updateSubscription: called without payment_processor_id');
       return;
     }
+    /** @var \CRM_Core_Payment_Smartdebit $paymentProcessorObj */
     $paymentProcessorObj = Civi\Payment\System::singleton()->getById($recurContributionParams['payment_processor_id']);
 
     if (CRM_Recurmaster_Settings::getValue('dryrun')) {
@@ -111,6 +112,11 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
       CRM_Recurmaster_Utils::log(__FUNCTION__ . ' updateSubscription: dryrun ' . $message, FALSE);
       return;
     }
+
+    // Convert to propertyBag and back again to get "standard" keys
+    $propertyBag = \Civi\Payment\PropertyBag::cast($recurContributionParams);
+    $recurContributionParams = $paymentProcessorObj->getPropertyBagAsArray($propertyBag);
+
     CRM_Core_Payment_Smartdebit::changeSubscription($paymentProcessorObj->getPaymentProcessor(), $recurContributionParams, $startDate);
   }
 
