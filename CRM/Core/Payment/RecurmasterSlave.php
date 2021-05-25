@@ -9,8 +9,6 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
 
   protected $_mode = NULL;
 
-  protected $_params = array();
-
   /**
    * Constructor
    *
@@ -21,7 +19,6 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
   public function __construct($mode, &$paymentProcessor) {
     $this->_mode = $mode;
     $this->_paymentProcessor = $paymentProcessor;
-    $this->_processorName = ts('Master Recurring Slave processor');
   }
 
   /**
@@ -73,8 +70,6 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
     return $params;
   }
 
-
-
   /**
    * Change the subscription amount
    *
@@ -84,7 +79,7 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @return bool
    * @throws \Exception
    */
-  public function changeSubscriptionAmount(&$message = '', $params = array()) {
+  public function changeSubscriptionAmount(&$message = '', $params = []) {
     // We need to set contributionRecurID for setRecurTransactionId as that is passed when triggered via doDirectPayment()
     $params['contributionRecurID'] = $params['id'];
     try {
@@ -133,7 +128,7 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
       $params[CRM_Recurmaster_Utils::getCustomByName('description')] = $params['description'];
       // Update the recurring payment
       civicrm_api3('ContributionRecur', 'create', $params);
-      civicrm_api3('Job', 'process_recurmaster', array('recur_ids' => array($params['master_recur'])));
+      civicrm_api3('Job', 'process_recurmaster', ['recur_ids' => [$params['master_recur']]]);
       return TRUE;
     }
     return FALSE;
@@ -151,24 +146,12 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
     return TRUE;
   }
 
-  function &error($errorCode = NULL, $errorMessage = NULL) {
-    $e = CRM_Core_Error::singleton();
-    if ($errorCode) {
-      $e->push($errorCode, 0, NULL, $errorMessage);
-    }
-    else {
-      $e->push(9001, 0, NULL, 'Unknown System Error.');
-    }
-    return $e;
-  }
-
   /**
    * This function checks to see if we have the right config values
    *
    * @return string the error message if any
-   * @public
    */
-  function checkConfig() {
+  public function checkConfig() {
     return NULL;
   }
 
@@ -185,7 +168,6 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
     if (empty($params['master_recur'])) {
       $errors['master_recur'] = E::ts("Select a master payment or use a different processor");
     }
-    return;
   }
 
   /**
@@ -212,9 +194,8 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @return array
    */
   public function getPaymentFormFields() {
-    return array('master_recur');
+    return ['master_recur'];
   }
-
 
   /**
    * Return an array of all the details about the fields potentially required for payment fields.
@@ -229,13 +210,13 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
     if (!isset($contactId)) {
       $contactId = CRM_Core_Session::singleton()->getLoggedInContactID();
     }
-    $masterRecurs = array();
+    $masterRecurs = [];
     if (!empty($contactId)) {
       $masterRecurs = CRM_Recurmaster_Master::getContactMasterRecurringContributionList($contactId);
     }
 
-    return array(
-      'master_recur' => array(
+    return [
+      'master_recur' => [
         'htmlType' => 'select',
         'name' => 'master_recur',
         'title' => ts('Add to existing Direct Debit'),
@@ -243,8 +224,8 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
         'attributes' => $masterRecurs,
         // eg. array('1' => '1st', '8' => '8th', '21' => '21st'),
         'is_required' => TRUE
-      ),
-    );
+      ],
+    ];
   }
 
   /**
@@ -258,7 +239,7 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @return array
    */
   public function getBillingAddressFields($billingLocationID = NULL) {
-    return array();
+    return [];
   }
 
   /**
@@ -267,12 +248,12 @@ class CRM_Core_Payment_RecurmasterSlave extends CRM_Core_Payment {
    * @return array
    */
   public function getEditableRecurringScheduleFields() {
-    return array(
+    return [
       'amount',
       'frequency_interval',
       'frequency_unit',
       'start_date',
-    );
+    ];
   }
 }
 
