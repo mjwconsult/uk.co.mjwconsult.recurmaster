@@ -1,5 +1,7 @@
 <?php
 
+use Civi\Payment\PropertyBag;
+
 class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
 
   /**
@@ -114,10 +116,10 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
     }
 
     // Convert to propertyBag and back again to get "standard" keys
-    $propertyBag = \Civi\Payment\PropertyBag::cast($recurContributionParams);
+    $propertyBag = PropertyBag::cast($recurContributionParams);
     $recurContributionParams = $paymentProcessorObj->getPropertyBagAsArray($propertyBag);
 
-    CRM_Core_Payment_Smartdebit::changeSubscription($paymentProcessorObj->getPaymentProcessor(), $recurContributionParams, $startDate);
+    $paymentProcessorObj->changeSubscription($paymentProcessorObj->getPaymentProcessor(), $recurContributionParams, $startDate);
   }
 
   /**

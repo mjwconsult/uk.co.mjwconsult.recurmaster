@@ -3,8 +3,8 @@
 Allow multiple recurring contributions to be linked to a single "Master" for collection.
 
 ## Requirements
-Version 0.3: Requires org.civicrm.smartdebit >= 1.24
- 
+Requires org.civicrm.smartdebit >= 1.40
+
 ## API
 The following API functions are implemented:
 
@@ -36,7 +36,7 @@ Popup to configure linked recurring contribution:
   1. A slave recurring contribution is linked.
   1. The daily Job.process_recurmaster is run.
 
-  
+
 ## TODO
 
 #### Test:
