@@ -47,7 +47,7 @@ class CRM_Recurmaster_Master {
           $amount += $lDetail['amount'];
         }
       }
-      $contributionRecur['amount'] = $amount;
+      $contributionRecur['amount'] = number_format($amount, 2, '.', '');
       if ($contributionRecur != $originalContributionRecur) {
         Civi::log()->debug('CRM_Recurmaster_Master::update: Calculated amount for R' . $contributionRecur['id'] . ' is ' . $contributionRecur['amount']);
         $recurResult = civicrm_api3('ContributionRecur', 'create', $contributionRecur);
