@@ -115,11 +115,8 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
       return;
     }
 
-    // Convert to propertyBag and back again to get "standard" keys
     $propertyBag = PropertyBag::cast($recurContributionParams);
-    $recurContributionParams = $paymentProcessorObj->getPropertyBagAsArray($propertyBag);
-
-    $paymentProcessorObj->changeSubscription($paymentProcessorObj->getPaymentProcessor(), $recurContributionParams, $startDate);
+    $paymentProcessorObj->changeSubscription($paymentProcessorObj->getPaymentProcessor(), $propertyBag, $startDate);
   }
 
   /**

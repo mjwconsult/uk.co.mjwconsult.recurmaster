@@ -25,7 +25,7 @@ require_once(__DIR__ . '/../../../../org.civicrm.smartdebit/Civi/Test/Smartdebit
 class CRM_ExampleTest extends \PHPUnit_Framework_TestCase implements HeadlessInterface, HookInterface, TransactionalInterface {
 
   use \Civi\Test\Api3TestTrait;
-  use \Civi\Test\SmartdebitTestTrait;
+  use \Civi\Test\TestTrait;
 
   public function setUpHeadless() {
     // Civi\Test has many helpers, like install(), uninstall(), sql(), and sqlFile().
