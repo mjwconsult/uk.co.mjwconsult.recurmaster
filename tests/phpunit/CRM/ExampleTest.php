@@ -22,7 +22,7 @@ use Civi\Test\TransactionalInterface;
 // FIXME: require trait, should not have to hardcode path like this
 require_once(__DIR__ . '/../../../../org.civicrm.smartdebit/Civi/Test/SmartdebitTestTrait.php');
 
-class CRM_ExampleTest extends \PHPUnit_Framework_TestCase implements HeadlessInterface, HookInterface, TransactionalInterface {
+class CRM_ExampleTest extends \PHPUnit\Framework\TestCase implements HeadlessInterface, HookInterface, TransactionalInterface {
 
   use \Civi\Test\Api3TestTrait;
   use \Civi\Test\TestTrait;
