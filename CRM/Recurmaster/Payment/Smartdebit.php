@@ -18,7 +18,7 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
       return;
     }
 
-    $smartDebitParams['variable_ddi[default_amount]'] = $defaultAmount;
+    $smartDebitParams['variable_ddi[default_amount]'] = CRM_Core_Payment_Smartdebit::formatAmountForSmartdebit($defaultAmount);
   }
 
   /**
@@ -54,7 +54,7 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
 
     // If anything has changed, trigger an update of the subscription.
     if ($updateAmounts) {
-      self::updateSubscription($recurContributionParams, NULL);
+      self::updateSubscription($recurContributionParams);
     }
   }
 
@@ -91,7 +91,7 @@ class CRM_Recurmaster_Payment_Smartdebit extends CRM_Recurmaster_Payment {
    * Update the Smartdebit Subscription
    *
    * @param $recurContributionParams
-   * @param null $startDate
+   * @param string $startDate
    *
    * @throws \CiviCRM_API3_Exception
    * @throws \Exception
